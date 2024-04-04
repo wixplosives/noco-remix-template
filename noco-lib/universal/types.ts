@@ -13,7 +13,7 @@ export const generateGUID = <T extends DataChangeCategory>(
 
 export type DataChangeCategory = "primitive" | "object" | "array";
 
-export type ExpandedDataValueContstraints =
+export type ExpandedDataValueConstraints =
   | string
   | number
   | boolean
@@ -24,7 +24,7 @@ export type ExpandedDataValueContstraints =
   | Record<never, never>;
 
 export interface ExpandedData<
-  V extends ExpandedDataValueContstraints = ExpandedDataValueContstraints
+  V extends ExpandedDataValueConstraints = ExpandedDataValueConstraints
 > {
   value: V;
   id: GUID;

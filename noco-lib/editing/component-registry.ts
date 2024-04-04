@@ -16,6 +16,13 @@ export class ComponentRegistry {
     string,
     Map<string, Promise<React.ComponentType<unknown>>>
   > = new Map();
+
+  constructor(
+    public ErrorView: React.ComponentType<{ message: string }>,
+    public LoadingView: React.ComponentType<{
+      message: string;
+    }>
+  ) {}
   addRegistry(key: string, registry: ComponentRegistryMap): void {
     this.registry.set(key, registry);
   }

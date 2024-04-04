@@ -4,7 +4,10 @@ import { NocoErrorViewFactory } from "./noco-error-view";
 import { useAsync } from "./use-async";
 
 export const componentRegistryContext = React.createContext<ComponentRegistry>(
-  new ComponentRegistry()
+  new ComponentRegistry(
+    NocoErrorViewFactory("ComponentRegistry", "Loading", true),
+    NocoErrorViewFactory("ComponentRegistry", "Loading", true)
+  )
 );
 
 export const useComponent = (

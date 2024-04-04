@@ -1,13 +1,22 @@
-import { useContext, useMemo, useReducer } from "react";
+import { useCallback, useContext, useMemo, useReducer } from "react";
 import {
   isExpandedDataWithBlock,
   type ExpandedData,
   type ExpandedDataWithBlock,
+  GUID,
 } from "../universal/types";
 import { usePage } from "./use-page";
 import { componentRegistryContext } from "./use-component";
 
-export const NocoEditView = () => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const useNocoEditView = <U,>(
+  toJsx: <P>(
+    compType: React.ComponentType<P>,
+    props: P,
+    key: GUID,
+    isRoot: boolean
+  ) => U
+) => {
   const page = usePage("a");
   const [ver, onComponentLoaded] = useReducer((state) => state + 1, 0);
   const componentRegistry = useContext(componentRegistryContext);
@@ -25,7 +34,12 @@ export const NocoEditView = () => {
       const [category, name] = componentType.split("/");
       const Component = componentRegistry.getComponentIfLoaded(category, name);
       if (Component === null || Component === undefined) {
-        return <div>Loading...{ver}</div>;
+        return toJsx(
+          componentRegistry.LoadingView,
+          { message: "Loading" + ver },
+          data.id,
+          page.value.props === data.value.props
+        );
       }
       const props = Object.entries(data.value.props.value).reduce(
         (acc, [key, value]) => {
@@ -34,9 +48,14 @@ export const NocoEditView = () => {
         },
         {} as Record<string, unknown>
       );
-      return <Component {...props} key={data.id} />;
+      return toJsx(
+        Component,
+        props,
+        data.id,
+        page.value.props === data.value.props
+      );
     });
-  }, [componentRegistry, onComponentLoaded, page, ver]);
+  }, [componentRegistry, page, toJsx, ver]);
 
   return deserializedPage as JSX.Element | null;
 };
@@ -97,3 +116,16 @@ function mapToEditView(
   }
   return data.value;
 }
+
+export const NocoEditView = () => {
+  const deserialize = useCallback(function <P>(
+    CompType: React.ComponentType<P>,
+    props: P,
+    key: GUID
+  ) {
+    return <CompType {...props} key={key} />;
+  },
+  []);
+  const res = useNocoEditView(deserialize);
+  return res;
+};

@@ -10,7 +10,7 @@ import {
 } from "noco-lib/editing/editing-data-manager";
 import { expandDataWithNewIds } from "noco-lib/universal/expander";
 import { ExpandedDataWithBlock } from "noco-lib/universal/types";
-import { NocoEditView } from "noco-lib/editing/noco-edit-view";
+import { NocoErrorViewFactory } from "noco-lib/editing/noco-error-view";
 export const meta = () => {
   return [
     { title: "New Remix App" },
@@ -18,7 +18,10 @@ export const meta = () => {
   ];
 };
 
-const componentRegistry = new ComponentRegistry();
+const componentRegistry = new ComponentRegistry(
+  NocoErrorViewFactory("ComponentRegistry", "Loading", true),
+  NocoErrorViewFactory("ComponentRegistry", "Loading", true)
+);
 
 componentRegistry.addRegistry("pageTemplates", pageTemplates);
 componentRegistry.addRegistry("sections", sectionMap);
@@ -34,9 +37,9 @@ export default function Index() {
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
       <componentRegistryContext.Provider value={componentRegistry}>
-        <editingDataProviderContext.Provider value={dataManager}>
-          <NocoEditView />
-        </editingDataProviderContext.Provider>
+        <editingDataProviderContext.Provider
+          value={dataManager}
+        ></editingDataProviderContext.Provider>
       </componentRegistryContext.Provider>
     </div>
   );

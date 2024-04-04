@@ -1,41 +1,43 @@
-import type { MetaFunction } from "@remix-run/deno";
-
-export const meta: MetaFunction = () => {
+import { ComponentRegistry } from "noco-lib/editing/component-registry";
+import { componentRegistryContext } from "noco-lib/editing/use-component";
+import { pageTemplates } from "~/noco/page-templates";
+import { sectionMap } from "~/noco/sections";
+import homeData from "../../data-mocks/home.json";
+import pageList from "../../data-mocks/page-list.json";
+import {
+  EditingDataManager,
+  editingDataProviderContext,
+} from "noco-lib/editing/editing-data-manager";
+import { expandDataWithNewIds } from "noco-lib/universal/expander";
+import { ExpandedDataWithBlock } from "noco-lib/universal/types";
+import { NocoEditView } from "noco-lib/editing/noco-edit-view";
+export const meta = () => {
   return [
     { title: "New Remix App" },
     { name: "description", content: "Welcome to Remix!" },
   ];
 };
 
+const componentRegistry = new ComponentRegistry();
+
+componentRegistry.addRegistry("pageTemplates", pageTemplates);
+componentRegistry.addRegistry("sections", sectionMap);
+const fetchPageList = async () => expandDataWithNewIds(pageList);
+const fetchPage = async () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = homeData as any;
+  return expandDataWithNewIds(data) as unknown as ExpandedDataWithBlock;
+};
+const dataManager = new EditingDataManager(fetchPageList, fetchPage);
+
 export default function Index() {
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
-      <h1>Welcome to Remix</h1>
-      <ul>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/blog"
-            rel="noreferrer"
-          >
-            15m Quickstart Blog Tutorial
-          </a>
-        </li>
-        <li>
-          <a
-            target="_blank"
-            href="https://remix.run/tutorials/jokes"
-            rel="noreferrer"
-          >
-            Deep Dive Jokes App Tutorial
-          </a>
-        </li>
-        <li>
-          <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
-            Remix Docs
-          </a>
-        </li>
-      </ul>
+      <componentRegistryContext.Provider value={componentRegistry}>
+        <editingDataProviderContext.Provider value={dataManager}>
+          <NocoEditView />
+        </editingDataProviderContext.Provider>
+      </componentRegistryContext.Provider>
     </div>
   );
 }

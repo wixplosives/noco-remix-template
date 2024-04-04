@@ -31,7 +31,7 @@ export interface ExpandedData<
 }
 
 export interface BlockData {
-  type: string;
+  __noco__type__: string;
   props: { [key: string]: unknown };
 }
 
@@ -52,10 +52,21 @@ export type ToExpandedData<T> = T extends
 
 export interface ExpandedDataWithBlock {
   value: {
-    type: ExpandedData<string>;
+    __noco__type__: ExpandedData<string>;
     props: Record<string, ExpandedData>;
   };
   id: GUID;
+}
+
+export function isExpandedDataWithBlock(
+  data: ExpandedData
+): data is ExpandedDataWithBlock {
+  return (
+    !!data.value &&
+    typeof data.value === "object" &&
+    "__noco__type__" in data.value &&
+    "props" in data.value
+  );
 }
 
 export interface NocoBaseChange<T extends DataChangeCategory> {

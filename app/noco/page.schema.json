@@ -5,9 +5,9 @@
         "defaultPageTemplate":{
             "type": "object",
             "properties": {
-                "type": {
+                "__noco__type__": {
                     "type": "string",
-                    "enum": ["defaultPageTemplate"]
+                    "enum": ["pageTemplates/defaultPageTemplate"]
                 },
                 "props":{
                     "type": "object",
@@ -23,7 +23,8 @@
                         }
                     }
                 }
-            }
+            },
+            "required": ["__noco__type__", "props"]
         },
         "defaultPageTemplates":{
             "oneOf": [{
@@ -33,9 +34,9 @@
         "heroSection": {
             "type": "object",
             "properties": {
-                "type": {
+                "__noco__type__": {
                     "type": "string",
-                    "enum": ["heroSection"]
+                    "enum": ["sections/hero"]
                 },
                 "props":{
                     "type": "object",
@@ -53,14 +54,15 @@
                     }
                 }
                
-            }
+            },
+            "required": ["__noco__type__", "props"]
         },
         "gallerySection": {
             "type": "object",
             "properties": {
-                "type": {
+                "__noco__type__": {
                     "type": "string",
-                    "enum": ["gallerySection"]
+                    "enum": ["sections/gallery"]
                 },
                 "props":{
                     "type": "object",
@@ -77,7 +79,8 @@
                         }
                     }
                 }
-            }
+            },
+            "required": ["__noco__type__", "props"]
         },
         "pageSections": {
             "oneOf": [{

@@ -1,36 +1,30 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { ComponentRegistry } from "./component-registry";
 import { NocoErrorViewFactory } from "./noco-error-view";
+import { useAsync } from "./use-async";
 
 export const componentRegistryContext = React.createContext<ComponentRegistry>(
   new ComponentRegistry()
 );
 
-export const useComponent = (categoryName: string, name: string) => {
+export const useComponent = (
+  categoryName: string,
+  name?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): React.ComponentType<any> | null => {
   const registry = React.useContext(componentRegistryContext);
-  const [_loadingStatus, setLoadingStatus] = React.useState<
-    "loading" | "loaded" | "error"
-  >("loading");
-  const loadingPromiseRef = React.useRef<Promise<
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    React.ComponentType<any>
-  > | null>(null);
-  const loadedComponent = registry.getComponentIfLoaded(categoryName, name);
-  if (loadedComponent) {
-    return loadedComponent;
-  }
-  if (loadingPromiseRef.current) {
-    return null;
-  }
-  loadingPromiseRef.current = registry
-    .loadComponent(categoryName, name)
-    .then((component) => {
-      setLoadingStatus("loaded");
-      return component;
-    })
-    .catch(() => {
-      setLoadingStatus("error");
-      return NocoErrorViewFactory(categoryName, name, true);
-    });
-  return null;
+
+  return useAsync(
+    useCallback(() => {
+      const loadedComponent =
+        name && registry.getComponentIfLoaded(categoryName, name);
+      if (loadedComponent) {
+        return loadedComponent;
+      }
+      if (!name) {
+        return NocoErrorViewFactory(categoryName, "Loading", true);
+      }
+      return registry.loadComponent(categoryName, name);
+    }, [categoryName, name, registry])
+  );
 };

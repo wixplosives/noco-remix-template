@@ -1,11 +1,11 @@
 {
     "$schema": "../app/noco/page.schema.json",
-    "type": "defaultPageTemplate",
+    "__noco__type__": "pageTemplates/defaultPageTemplate",
     "props": {
         "title": "Page Title",
         "children": [
             {
-                "type": "heroSection",
+                "__noco__type__": "sections/hero",
                 "props": {
                     "title": "Hero Section Title",
                     "subtitle": "Hero Section Subtitle",

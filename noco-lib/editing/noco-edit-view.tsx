@@ -8,7 +8,6 @@ import {
 import { usePage } from "./use-page";
 import { useComponentRegistry } from "./component-registry-context";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const useNocoEditView = <U,>(
   toJsx: <P>(
     compType: React.ComponentType<P>,
@@ -22,7 +21,7 @@ export const useNocoEditView = <U,>(
   const componentRegistry = useComponentRegistry();
 
   const deserializedPage = useMemo(() => {
-    const deps = new Set(getDeserialieDependecies(page));
+    const deps = new Set(getDeserializeDependencies(page));
     for (const dep of deps) {
       if (!componentRegistry.getComponentById(dep)) {
         componentRegistry.loadComponentById(dep).then(onComponentLoaded);
@@ -58,7 +57,7 @@ export const useNocoEditView = <U,>(
   return deserializedPage as JSX.Element | null;
 };
 
-function getDeserialieDependecies(data: ExpandedData): string[] {
+function getDeserializeDependencies(data: ExpandedData): string[] {
   if (!data) {
     return [];
   }
@@ -66,7 +65,7 @@ function getDeserialieDependecies(data: ExpandedData): string[] {
     return [
       data.value.__noco__type__.value,
       ...Object.values(data.value.props.value).flatMap(
-        getDeserialieDependecies
+        getDeserializeDependencies
       ),
     ];
   }
@@ -74,13 +73,14 @@ function getDeserialieDependecies(data: ExpandedData): string[] {
     return [];
   }
   if (Array.isArray(data.value)) {
-    return data.value.flatMap(getDeserialieDependecies);
+    return data.value.flatMap(getDeserializeDependencies);
   }
   if (typeof data.value === "object") {
-    return Object.values(data.value).flatMap(getDeserialieDependecies);
+    return Object.values(data.value).flatMap(getDeserializeDependencies);
   }
   return [];
 }
+
 function mapToEditView(
   data: ExpandedData,
   deserialize: (

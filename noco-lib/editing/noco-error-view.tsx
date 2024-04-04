@@ -1,35 +1,19 @@
-import React from "react";
+import { ComponentDriver } from "./component-registry";
 
-export const cachedComponentMap = new Map<
-  string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  Map<string, React.ComponentType<any>>
->();
-export const NocoErrorViewFactory = (
-  categoryName: string,
-  componentName: string,
-  categoryFound: boolean
-) => {
-  if (cachedComponentMap.has(categoryName)) {
-    const categoryMap = cachedComponentMap.get(categoryName)!;
-    if (categoryMap.has(componentName)) {
-      return categoryMap.get(componentName)!;
-    }
-  }
-  const errorView = () => {
-    return (
-      <div>
-        <h1>
-          {categoryFound
-            ? `Component ${componentName} not found in category ${categoryName}`
-            : `Category ${categoryName} not found`}
-        </h1>
-      </div>
-    );
-  };
-  if (!cachedComponentMap.has(categoryName)) {
-    cachedComponentMap.set(categoryName, new Map());
-  }
-  cachedComponentMap.get(categoryName)!.set(componentName, errorView);
-  return errorView;
-};
+export function ErrorView({ message }: { message: string }) {
+  return (
+    <div>
+      <h1>{message}</h1>
+    </div>
+  );
+}
+
+export const systemErrors: ComponentDriver[] = [
+  {
+    id: "NocoErrorView",
+    type: "#noco-system-component",
+    loadComponent: async () => ErrorView,
+    LoadSchema: async () => {},
+    component: ErrorView,
+  },
+];

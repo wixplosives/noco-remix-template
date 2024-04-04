@@ -1,4 +1,4 @@
-import { useCallback, useContext, useMemo, useReducer } from "react";
+import { useCallback, useMemo, useReducer } from "react";
 import {
   isExpandedDataWithBlock,
   type ExpandedData,
@@ -6,7 +6,7 @@ import {
   GUID,
 } from "../universal/types";
 import { usePage } from "./use-page";
-import { componentRegistryContext } from "./use-component";
+import { useComponentRegistry } from "./component-registry-context";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const useNocoEditView = <U,>(
@@ -19,23 +19,21 @@ export const useNocoEditView = <U,>(
 ) => {
   const page = usePage("a");
   const [ver, onComponentLoaded] = useReducer((state) => state + 1, 0);
-  const componentRegistry = useContext(componentRegistryContext);
+  const componentRegistry = useComponentRegistry();
 
   const deserializedPage = useMemo(() => {
     const deps = new Set(getDeserialieDependecies(page));
     for (const dep of deps) {
-      const [category, name] = dep.split("/");
-      if (!componentRegistry.getComponentIfLoaded(category, name)) {
-        componentRegistry.loadComponent(category, name).then(onComponentLoaded);
+      if (!componentRegistry.getComponentById(dep)) {
+        componentRegistry.loadComponentById(dep).then(onComponentLoaded);
       }
     }
     return mapToEditView(page, (data, deserialize) => {
       const componentType = data.value.__noco__type__.value;
-      const [category, name] = componentType.split("/");
-      const Component = componentRegistry.getComponentIfLoaded(category, name);
+      const Component = componentRegistry.getComponentById(componentType);
       if (Component === null || Component === undefined) {
         return toJsx(
-          componentRegistry.LoadingView,
+          componentRegistry.getErrorView(),
           { message: "Loading" + ver },
           data.id,
           page.value.props === data.value.props

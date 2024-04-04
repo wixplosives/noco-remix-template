@@ -1,7 +1,7 @@
 import { ComponentRegistry } from "noco-lib/editing/component-registry";
-import { componentRegistryContext } from "noco-lib/editing/use-component";
+import { componentRegistryContext } from "noco-lib/editing/component-registry-context";
 import { pageTemplates } from "~/noco/page-templates";
-import { sectionMap } from "~/noco/sections";
+import { sections } from "~/noco/sections";
 import homeData from "../../data-mocks/home.json";
 import pageList from "../../data-mocks/page-list.json";
 import {
@@ -10,7 +10,7 @@ import {
 } from "noco-lib/editing/editing-data-manager";
 import { expandDataWithNewIds } from "noco-lib/universal/expander";
 import { ExpandedDataWithBlock } from "noco-lib/universal/types";
-import { NocoErrorViewFactory } from "noco-lib/editing/noco-error-view";
+import { systemErrors } from "noco-lib/editing/noco-error-view";
 export const meta = () => {
   return [
     { title: "New Remix App" },
@@ -18,19 +18,18 @@ export const meta = () => {
   ];
 };
 
-const componentRegistry = new ComponentRegistry(
-  NocoErrorViewFactory("ComponentRegistry", "Loading", true),
-  NocoErrorViewFactory("ComponentRegistry", "Loading", true)
-);
+const componentRegistry = new ComponentRegistry();
+componentRegistry.registerAll(systemErrors);
+componentRegistry.registerAll(pageTemplates);
+componentRegistry.registerAll(sections);
 
-componentRegistry.addRegistry("pageTemplates", pageTemplates);
-componentRegistry.addRegistry("sections", sectionMap);
 const fetchPageList = async () => expandDataWithNewIds(pageList);
 const fetchPage = async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = homeData as any;
   return expandDataWithNewIds(data) as unknown as ExpandedDataWithBlock;
 };
+
 const dataManager = new EditingDataManager(fetchPageList, fetchPage);
 
 export default function Index() {

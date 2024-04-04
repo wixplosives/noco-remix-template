@@ -34,7 +34,7 @@ export const NocoEditView = () => {
         },
         {} as Record<string, unknown>
       );
-      return <Component {...props} />;
+      return <Component {...props} key={data.id} />;
     });
   }, [componentRegistry, onComponentLoaded, page, ver]);
 

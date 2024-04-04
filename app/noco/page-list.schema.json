@@ -1,0 +1,32 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "Page list data",
+    "definitions": {
+        
+        "page": {
+            "type": "object",
+            "properties": {
+                "slug": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pageID": {
+                    "type": "string",
+                    "format": "documentID-pageID"
+                }
+
+            },
+            "required": ["slug", "name", "pageID"]
+        }
+    },
+    "properties": {
+        "pages": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/page"
+            }
+        }
+    }
+}

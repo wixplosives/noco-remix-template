@@ -1,0 +1,93 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "Dynamic page data",
+    "definitions": {
+        "defaultPageTemplate":{
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["defaultPageTemplate"]
+                },
+                "props":{
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string"
+                        },
+                        "children": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/pageSections"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "defaultPageTemplates":{
+            "oneOf": [{
+                "$ref": "#/definitions/defaultPageTemplate"
+            }]
+        },
+        "heroSection": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["heroSection"]
+                },
+                "props":{
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string"
+                        },
+                        "subtitle": {
+                            "type": "string"
+                        },
+                        "backgroundImage": {
+                            "type": "string",
+                            "format": "image-url"
+                        }
+                    }
+                }
+               
+            }
+        },
+        "gallerySection": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "enum": ["gallerySection"]
+                },
+                "props":{
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "type": "string"
+                        },
+                        "images": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "format": "image-url"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "pageSections": {
+            "oneOf": [{
+                "$ref": "#/definitions/heroSection"
+            }, {
+                "$ref": "#/definitions/gallerySection"
+            }]
+        }
+    },
+    "oneOf": [{
+        "$ref": "#/definitions/defaultPageTemplate"
+    }]
+}

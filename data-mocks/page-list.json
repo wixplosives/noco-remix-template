@@ -1,0 +1,9 @@
+{
+    "$schema": "../app/noco/page-list.schema.json",
+    "pages": [
+        {
+            "name": "Home",
+            "slug": "home",
+            "pageID": "./home.json"
+        }]
+}

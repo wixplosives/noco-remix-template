@@ -4,11 +4,12 @@ export type ComponentDriver = {
   id: string;
   type: string;
   loadComponent: () => Promise<React.ComponentType<any>>;
-  componentPromise?: Promise<React.ComponentType<any>>;
-  component?: React.ComponentType<any>;
   LoadSchema?: () => Promise<unknown>;
-  schemaPromise?: Promise<unknown>;
+  component?: React.ComponentType<any>;
   schema?: unknown;
+  componentPromise?: Promise<React.ComponentType<any>>;
+  schemaPromise?: Promise<unknown>;
+  componentLoadError?: unknown;
 };
 
 export class ComponentRegistry {
@@ -42,7 +43,12 @@ export class ComponentRegistry {
     if (!componentDriver.componentPromise) {
       componentDriver.componentPromise = componentDriver.loadComponent();
     }
-    return await componentDriver.componentPromise;
+    try {
+      return await componentDriver.componentPromise;
+    } catch (e) {
+      componentDriver.componentLoadError = e;
+      throw e;
+    }
   }
   getErrorView() {
     const comp = this.getDriverById("NocoErrorView")?.component;

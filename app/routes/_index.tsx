@@ -9,8 +9,10 @@ import {
   editingDataProviderContext,
 } from "noco-lib/editing/editing-data-manager";
 import { expandDataWithNewIds } from "noco-lib/universal/expander";
-import { ExpandedDataWithBlock } from "noco-lib/universal/types";
+import { ExpandedDataWithBlock, GUID } from "noco-lib/universal/types";
 import { systemErrors } from "noco-lib/editing/noco-error-view";
+import { useNocoEditView } from "noco-lib/editing/noco-edit-view";
+import { useCallback } from "react";
 export const meta = () => {
   return [
     { title: "New Remix App" },
@@ -36,10 +38,23 @@ export default function Index() {
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
       <componentRegistryContext.Provider value={componentRegistry}>
-        <editingDataProviderContext.Provider
-          value={dataManager}
-        ></editingDataProviderContext.Provider>
+        <editingDataProviderContext.Provider value={dataManager}>
+          <InternalIndex />
+        </editingDataProviderContext.Provider>
       </componentRegistryContext.Provider>
     </div>
   );
 }
+
+const InternalIndex = () => {
+  const deserialize = useCallback(function <P>(
+    Block: React.ComponentType<P>,
+    props: P,
+    key: GUID
+  ) {
+    return <Block {...props} key={key} />;
+  },
+  []);
+  const res = useNocoEditView(deserialize);
+  return res as JSX.Element;
+};

@@ -9,23 +9,30 @@ class NocoDoc {
     return new NocoNode(this, tag, attributes);
   }
   createValueNode<const T extends string>(
-    value: NocoNodeValue,
-    tag: T
+    tag: T,
+    value: NocoNodeValue
   ): NocoNode<T> {
     return new NocoNode(this, tag, [], value);
   }
   createAttribute(key: string, value: NocoNodeValue) {
-    return this.createValueNode([key, value], "#attribute");
+    return this.createValueNode("#attribute", [key, value]);
   }
   createText(value: string | NocoNode) {
-    return this.createValueNode(value, "#text");
+    return this.createValueNode("#text", value);
   }
-  createElement(tagName: string, children: Array<NocoNode>) {
-    const tag = this.createValueNode(tagName, "#dom-element");
-    return this.createNode(tag, [this.createAttribute("children", children)]);
+  createElement(tagName: string, attrs?: Record<string, NocoNodeValue>) {
+    const tag = this.createValueNode("#dom-element", tagName);
+    return this.createNode(
+      tag,
+      attrs
+        ? Object.entries(attrs).map(([key, value]) =>
+            this.createAttribute(key, value)
+          )
+        : []
+    );
   }
   createComponent(componentId: string) {
-    const tag = this.createValueNode(componentId, "#component");
+    const tag = this.createValueNode("#component", componentId);
     return this.createNode(tag, []);
   }
 }
@@ -40,16 +47,15 @@ class Attrs {
     if (!attr) {
       return undefined;
     }
-    if (Array.isArray(attr.nodeValue)) {
-      const valueNode = attr.nodeValue[1];
-      if (NocoNode.isNocoNode(valueNode)) {
-        return valueNode.nodeValue;
-      }
-      return valueNode;
-    } else if (NocoNode.isNocoNode(attr.nodeValue)) {
-      return attr.nodeValue.nodeValue;
+    if (Array.isArray(attr.nodeValue) && attr.nodeValue.length === 2) {
+      return attr.nodeValue[1];
     } else {
-      return attr.nodeValue;
+      throw new Error("Invalid attribute value");
+    }
+  }
+  *entries() {
+    for (const key of this.byKey.keys()) {
+      yield [key, this.getAttribute(key)] as const;
     }
   }
   private indexKeys(args: NocoNode<"#attribute">[]) {
@@ -74,9 +80,10 @@ class NocoNode<
   static isNocoNode(node: unknown): node is NocoNode {
     return node instanceof NocoNode;
   }
+  #attrs: Attrs | undefined;
   constructor(
     public owner: NocoDoc,
-    public tag: Tag,
+    private tag: Tag,
     public attributes: NocoNode<"#attribute">[],
     public nodeValue?: NocoNodeValue,
     public nodeID: string = owner.idGen(),
@@ -84,7 +91,6 @@ class NocoNode<
   ) {
     this.initParents(attributes, nodeValue);
   }
-  #attrs: Attrs | undefined;
   private initParents(
     attributes: NocoNode<"#attribute">[],
     nodeValue?: NocoNodeValue
@@ -98,38 +104,72 @@ class NocoNode<
       nodeValue.setParent(this);
     }
   }
-  getAttribute(name: string) {
-    if (!this.#attrs) {
-      this.#attrs = new Attrs(this);
+  getTag() {
+    if (typeof this.tag === "string") {
+      return this.tag;
+    } else {
+      return this.tag.tag;
     }
+  }
+  getAttribute(name: string) {
+    this.#attrs ??= new Attrs(this);
     return this.#attrs.getAttribute(name);
   }
   setParent(parent: NocoNode | null) {
     this.parent = parent;
   }
-  toJSON(): {
+  walkNoco(
+    callback: (node: NocoNode) => void,
+    options = { attr: /./, nodeValue: true }
+  ) {
+    callback(this);
+    if (options.attr) {
+      this.#attrs ??= new Attrs(this);
+      for (const [, value] of this.#attrs.entries()) {
+        if (Array.isArray(value)) {
+          value.forEach(
+            (child) =>
+              NocoNode.isNocoNode(child) && child.walkNoco(callback, options)
+          );
+        } else if (NocoNode.isNocoNode(value)) {
+          value.walkNoco(callback, options);
+        }
+      }
+    }
+    if (options.nodeValue) {
+      if (Array.isArray(this.nodeValue)) {
+        this.nodeValue.forEach(
+          (child) =>
+            NocoNode.isNocoNode(child) && child.walkNoco(callback, options)
+        );
+      } else if (NocoNode.isNocoNode(this.nodeValue)) {
+        this.nodeValue.walkNoco(callback, options);
+      }
+    }
+  }
+  toJSON(options = { parentIds: true }): {
     tag: unknown;
     attributes: unknown[];
     nodeValue: unknown;
     nodeID: string;
   } {
     return {
-      tag: typeof this.tag === "string" ? this.tag : this.tag.toJSON(),
-      attributes: this.attributes.map((attr) => attr.toJSON()),
+      tag: typeof this.tag === "string" ? this.tag : this.tag.toJSON(options),
+      attributes: this.attributes.map((attr) => attr.toJSON(options)),
       nodeValue: Array.isArray(this.nodeValue)
         ? this.nodeValue.map((child) =>
-            NocoNode.isNocoNode(child) ? child.toJSON() : child
+            NocoNode.isNocoNode(child) ? child.toJSON(options) : child
           )
         : NocoNode.isNocoNode(this.nodeValue)
-        ? this.nodeValue.toJSON()
+        ? this.nodeValue.toJSON(options)
         : this.nodeValue,
       nodeID: this.nodeID,
+      ...(options.parentIds && this.parent && { parentID: this.parent.nodeID }),
     };
   }
   toRenderable(getComponent: (id: string) => (...args: unknown[]) => unknown) {
     const tag = this.tag;
-    let renderTagId: undefined | string | ((...args: unknown[]) => unknown);
-    let renderChildren: unknown[] = [];
+    let type: undefined | string | ((...args: unknown[]) => unknown);
     if (typeof tag === "string") {
       if (tag === "#text") {
         return this.nodeValue;
@@ -141,30 +181,35 @@ class NocoNode<
       if (typeof val !== "string") {
         throw new Error("Invalid tag value");
       }
-      renderTagId = val;
+      type = val;
     } else if (tag.tag === "#component") {
       const val = tag.nodeValue;
       if (typeof val !== "string") {
         throw new Error("Invalid component ID");
       }
-      renderTagId = getComponent(val);
+      type = getComponent(val);
     } else {
       throw new Error("Invalid tag");
     }
-    const children = this.getAttribute("children");
-    if (children) {
-      if (!Array.isArray(children)) {
-        throw new Error("Invalid children attribute");
+    const props: Record<string, unknown> = {};
+    this.#attrs ??= new Attrs(this);
+
+    for (const [key, value] of this.#attrs.entries()) {
+      if (Array.isArray(value)) {
+        props[key] = value.map((child) =>
+          NocoNode.isNocoNode(child) ? child.toRenderable(getComponent) : child
+        );
+      } else if (NocoNode.isNocoNode(value)) {
+        props[key] = value.toRenderable(getComponent);
+      } else {
+        props[key] = value;
       }
-      renderChildren = children.map((child) =>
-        NocoNode.isNocoNode(child) ? child.toRenderable(getComponent) : child
-      );
     }
+
     return {
-      type: renderTagId,
-      props: {
-        children: renderChildren,
-      },
+      key: this.nodeID,
+      type: type,
+      props,
     };
   }
 }
@@ -180,18 +225,34 @@ class NocoNode<
 if (typeof window !== "undefined") {
   const doc = new NocoDoc();
 
-  const el = doc.createElement("div", [
-    doc.createText("Hello, world!"),
-    doc.createElement("div", [doc.createText("What's up?")]),
-    doc.createComponent("my-component"),
-  ]);
+  const el = doc.createElement("div", {
+    children: [
+      doc.createText("Hello, world!"),
+      doc.createElement("div", { children: [doc.createText("What's up?")] }),
+      doc.createComponent("Button"),
+    ],
+    slot: doc.createComponent("Avatar"),
+  });
+
+  el.walkNoco((node) => {
+    if (node.getTag() === "#component") {
+      console.log("Component", node.nodeID, node);
+    }
+  });
+
   console.log("Full format");
   console.log(el.toJSON());
 
   console.log("Renderable format");
+
   console.log(
-    el.toRenderable(() => {
-      return () => null;
+    el.toRenderable((id) => {
+      return new Function(
+        `return function ${id.replace(
+          /[^a-zA-Z0-9]/g,
+          "_"
+        )}() { return "Hello, world!"; }`
+      )();
     })
   );
 }

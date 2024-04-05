@@ -1,12 +1,12 @@
 import {
-  type ExpandedDataValueContstraints,
+  type ExpandedDataValueConstraints,
   type ExpandedData,
   type ToExpandedData,
   generateGUID,
 } from "./types";
 
-export function expandDataWithNewIds<T extends ExpandedDataValueContstraints>(
-  data: ExpandedDataValueContstraints
+export function expandDataWithNewIds<T extends ExpandedDataValueConstraints>(
+  data: ExpandedDataValueConstraints
 ): ToExpandedData<T> {
   if (data === null || data === undefined) {
     return {

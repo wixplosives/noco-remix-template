@@ -2,7 +2,7 @@ import { createBoard } from "@wixc3/react-board";
 import { useNocoEditView } from "../../../../noco-lib/editing/noco-edit-view";
 import { ComponentRegistry } from "noco-lib/editing/component-registry";
 import { pageTemplates } from "~/noco/page-templates";
-import { sectionMap } from "~/noco/sections";
+import { sections } from "~/noco/sections";
 import { expandDataWithNewIds } from "noco-lib/universal/expander";
 import pageList from "../../../../data-mocks/page-list.json";
 import homeData from "../../../../data-mocks/home.json";
@@ -11,17 +11,15 @@ import {
   EditingDataManager,
   editingDataProviderContext,
 } from "noco-lib/editing/editing-data-manager";
-import { componentRegistryContext } from "noco-lib/editing/use-component";
-import { NocoErrorViewFactory } from "noco-lib/editing/noco-error-view";
-import { useCallback } from "react";
-import React from "react";
-const componentRegistry = new ComponentRegistry(
-  NocoErrorViewFactory("ComponentRegistry", "Loading", true),
-  NocoErrorViewFactory("ComponentRegistry", "Loading", true)
-);
+import { componentRegistryContext } from "noco-lib/editing/component-registry-context";
+import React, { useCallback } from "react";
+import { systemErrors } from "noco-lib/editing/noco-error-view";
 
-componentRegistry.addRegistry("pageTemplates", pageTemplates);
-componentRegistry.addRegistry("sections", sectionMap);
+const componentRegistry = new ComponentRegistry();
+componentRegistry.registerAll(systemErrors);
+componentRegistry.registerAll(pageTemplates);
+componentRegistry.registerAll(sections);
+
 const fetchPageList = async () => expandDataWithNewIds(pageList);
 const fetchPage = async () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

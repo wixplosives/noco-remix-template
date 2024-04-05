@@ -9,19 +9,13 @@ class NocoDoc {
     return new NocoNode(this, tag, attributes);
   }
   createValueNode<const T extends string>(
-    value: string | NocoNode | NocoNode[],
+    value: NocoNodeValue,
     tag: T
   ): NocoNode<T> {
     return new NocoNode(this, tag, [], value);
   }
-  createAttribute(key: string, value: string | NocoNode | NocoNode[]) {
-    return this.createValueNode(
-      [
-        this.createValueNode(key, "#key"),
-        this.createValueNode(value, "#value"),
-      ],
-      "#attribute"
-    );
+  createAttribute(key: string, value: NocoNodeValue) {
+    return this.createValueNode([key, value], "#attribute");
   }
   createText(value: string | NocoNode) {
     return this.createValueNode(value, "#text");
@@ -47,8 +41,11 @@ class Attrs {
       return undefined;
     }
     if (Array.isArray(attr.nodeValue)) {
-      const valueNode = attr.nodeValue as NocoNode<string>[];
-      return valueNode[1].nodeValue;
+      const valueNode = attr.nodeValue[1];
+      if (NocoNode.isNocoNode(valueNode)) {
+        return valueNode.nodeValue;
+      }
+      return valueNode;
     } else if (NocoNode.isNocoNode(attr.nodeValue)) {
       return attr.nodeValue.nodeValue;
     } else {
@@ -57,14 +54,19 @@ class Attrs {
   }
   private indexKeys(args: NocoNode<"#attribute">[]) {
     args.forEach((attr) => {
-      const v = attr.nodeValue as NocoNode<string>[];
-      const key = v[0].nodeValue as string;
+      if (!Array.isArray(attr.nodeValue)) {
+        throw new Error("Invalid attribute value");
+      }
+      const [key] = attr.nodeValue;
+      if (typeof key !== "string") {
+        throw new Error("Invalid attribute key");
+      }
       this.byKey.set(key, attr);
     });
   }
 }
 
-type NocoNodeValue = string | NocoNode | NocoNode[];
+type NocoNodeValue = string | NocoNode | NocoNodeValue[];
 
 class NocoNode<
   Tag extends string | NocoNode<string> = string | NocoNode<string>
@@ -88,12 +90,12 @@ class NocoNode<
     nodeValue?: NocoNodeValue
   ) {
     attributes.forEach((attr) => attr.setParent(this));
-    if (typeof nodeValue !== "string") {
-      if (Array.isArray(nodeValue)) {
-        nodeValue.forEach((child) => child.setParent(this));
-      } else if (NocoNode.isNocoNode(nodeValue)) {
-        nodeValue.setParent(this);
-      }
+    if (Array.isArray(nodeValue)) {
+      nodeValue.forEach(
+        (child) => NocoNode.isNocoNode(child) && child.setParent(this)
+      );
+    } else if (NocoNode.isNocoNode(nodeValue)) {
+      nodeValue.setParent(this);
     }
   }
   getAttribute(name: string) {
@@ -115,7 +117,9 @@ class NocoNode<
       tag: typeof this.tag === "string" ? this.tag : this.tag.toJSON(),
       attributes: this.attributes.map((attr) => attr.toJSON()),
       nodeValue: Array.isArray(this.nodeValue)
-        ? this.nodeValue.map((child) => child.toJSON())
+        ? this.nodeValue.map((child) =>
+            NocoNode.isNocoNode(child) ? child.toJSON() : child
+          )
         : NocoNode.isNocoNode(this.nodeValue)
         ? this.nodeValue.toJSON()
         : this.nodeValue,

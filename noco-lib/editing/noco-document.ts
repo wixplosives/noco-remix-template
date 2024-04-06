@@ -1,6 +1,7 @@
 import { idGen } from "./id-gen";
 
 const TAGS = {
+  // render components
   COMPONENT: "#component",
   ELEMENT: "#element",
   TEXT: "#text",
@@ -14,32 +15,42 @@ const TAGS = {
   UNDEFINED: "#undefined",
 } as const;
 
-type NocoValueConstraints =
-  | undefined
-  | null
-  | string
-  | boolean
-  | number
-  | object;
+type NocoRawValue = undefined | null | string | boolean | number | object;
 
 type NocoStoredValue =
-  | NocoValueConstraints
+  | NocoRawValue
   | NocoStoredNode
   | {
       [key: string]: NocoStoredValue;
     }
   | readonly NocoStoredValue[];
 
-type NocoStoredTag =
+type NocoStoredType =
   | string
   | { id: string; __noco__type__: string; value: NocoStoredValue };
 
 type NocoStoredNode = {
   id: string;
-  __noco__type__: NocoStoredTag;
+  __noco__type__: NocoStoredType;
   value?: NocoStoredValue;
   props?: Record<string, NocoStoredNode>;
 };
+
+type NocoNodeValue =
+  | NocoRawValue
+  | NocoNode
+  | {
+      [key: string]: NocoNodeValue;
+    }
+  | readonly NocoNodeValue[];
+
+type NocoComponentNode = NocoNode<
+  NocoNode<typeof TAGS.COMPONENT, string>,
+  never
+>;
+
+type NocoType = string | NocoNode<string>;
+type NocoAttributes = Record<string, NocoNode> | undefined;
 
 export class NocoDoc {
   static fromJSON(nocoData: NocoStoredNode) {
@@ -60,8 +71,8 @@ export class NocoDoc {
   setRoot(node: NocoNode<NocoNode<typeof TAGS.COMPONENT, string>, never>) {
     this.root = node;
   }
-  toNocoNode(nocoData: NocoStoredNode): NocoNode<NocoTag, NocoNodeValue> {
-    const tag =
+  toNocoNode(nocoData: NocoStoredNode): NocoNode<NocoType, NocoNodeValue> {
+    const nocoType =
       typeof nocoData.__noco__type__ === "string"
         ? nocoData.__noco__type__
         : this.createValueNode(
@@ -69,15 +80,15 @@ export class NocoDoc {
             nocoData.__noco__type__.value,
             nocoData.__noco__type__.id
           );
-    const attrs = nocoData.props
+    const attributes = nocoData.props
       ? Object.entries(nocoData.props).reduce((acc, [key, value]) => {
           acc[key] = this.toNocoNode(value);
           return acc;
         }, {} as NonNullable<NocoAttributes>)
       : undefined;
     return this.createNode(
-      tag,
-      attrs,
+      nocoType,
+      attributes,
       this.toNocoValue(nocoData.value),
       nocoData.id
     );
@@ -109,33 +120,33 @@ export class NocoDoc {
     );
   }
   private createNode<T extends string | NocoNode<string>>(
-    tag: T,
+    nocoType: T,
     attributes: NocoAttributes,
     nodeValue?: NocoNodeValue,
     nodeId?: string
   ) {
-    return new NocoNode(this, tag, attributes, nodeValue, nodeId);
+    return new NocoNode(this, nocoType, attributes, nodeValue, nodeId);
   }
   private createValueNode<const T extends string, V extends NocoNodeValue>(
-    tag: T,
+    nocoType: T,
     value: V,
     nodeId?: string
   ): NocoNode<T, V> {
-    return new NocoNode(this, tag, undefined, value, nodeId);
+    return new NocoNode(this, nocoType, undefined, value, nodeId);
   }
   createText(value: string | NocoNode) {
-    const tag = this.createValueNode(TAGS.TEXT, value);
-    return this.createNode(tag, {});
+    const nocoType = this.createValueNode(TAGS.TEXT, value);
+    return this.createNode(nocoType, {});
   }
   createElement(tagName: string) {
-    const tag = this.createValueNode(TAGS.ELEMENT, tagName);
-    return this.createNode(tag, {});
+    const nocoType = this.createValueNode(TAGS.ELEMENT, tagName);
+    return this.createNode(nocoType, {});
   }
   createComponent(componentId: string) {
-    const tag = this.createValueNode(TAGS.COMPONENT, componentId);
-    return this.createNode(tag, {});
+    const nocoType = this.createValueNode(TAGS.COMPONENT, componentId);
+    return this.createNode(nocoType, {});
   }
-  createValue(value: NocoValueConstraints): NocoNode<string, NocoNodeValue> {
+  createValue(value: NocoRawValue): NocoNode<string, NocoNodeValue> {
     if (Array.isArray(value)) {
       return this.createValueNode(
         TAGS.ARRAY,
@@ -165,34 +176,18 @@ export class NocoDoc {
   }
 }
 
-type NocoNodeValue =
-  | NocoValueConstraints
-  | NocoNode
-  | {
-      [key: string]: NocoNodeValue;
-    }
-  | readonly NocoNodeValue[];
-
-type NocoComponentNode = NocoNode<
-  NocoNode<typeof TAGS.COMPONENT, string>,
-  never
->;
-
-type NocoTag = string | NocoNode<string>;
-type NocoAttributes = Record<string, NocoNode> | undefined;
-
 class NocoNode<
-  Tag extends NocoTag = NocoTag,
-  Value extends NocoNodeValue = NocoNodeValue
+  T extends NocoType = NocoType,
+  V extends NocoNodeValue = NocoNodeValue
 > {
   static isNocoNode(node: unknown): node is NocoNode {
     return node instanceof NocoNode;
   }
   constructor(
     public doc: NocoDoc,
-    private tag: Tag,
+    private type: T,
     public attributes: NocoAttributes,
-    public value: Value,
+    public value: V,
     public id: string = doc.idGen(),
     public parent: NocoNode | null = null
   ) {
@@ -210,14 +205,17 @@ class NocoNode<
       nodeValue.setParent(this);
     }
   }
-  isComponent(): this is NocoComponentNode {
-    return typeof this.tag !== "string" && this.tag.tag === TAGS.COMPONENT;
+  setValue(value: V) {
+    this.value = value;
   }
-  getTag() {
-    if (typeof this.tag === "string") {
-      return this.tag;
+  isComponent(): this is NocoComponentNode {
+    return typeof this.type !== "string" && this.type.type === TAGS.COMPONENT;
+  }
+  getType(): string {
+    if (typeof this.type === "string") {
+      return this.type;
     } else {
-      return this.tag.tag;
+      return this.type.type;
     }
   }
   getAttribute(name: string) {
@@ -253,12 +251,12 @@ class NocoNode<
     return {
       id: this.id,
       __noco__type__:
-        typeof this.tag === "string"
-          ? this.tag
+        typeof this.type === "string"
+          ? this.type
           : {
-              id: this.tag.id,
-              __noco__type__: this.tag.tag,
-              value: this.tag.value as string,
+              id: this.type.id,
+              __noco__type__: this.type.type,
+              value: this.type.value as string,
             },
       props: this.attributes
         ? Object.entries(this.attributes).reduce((acc, [key, node]) => {
@@ -271,14 +269,14 @@ class NocoNode<
       ...(options.parentIds && this.parent && { parentID: this.parent.id }),
     };
   }
-  tagToJSON(tag: NocoTag): NocoStoredTag {
-    if (typeof tag === "string") {
-      return tag;
+  typeToJSON(nocoType: NocoType): NocoStoredType {
+    if (typeof nocoType === "string") {
+      return nocoType;
     } else {
       return {
-        id: tag.id,
-        __noco__type__: tag.tag,
-        value: this.valueToJSON(tag.value),
+        id: nocoType.id,
+        __noco__type__: nocoType.type,
+        value: this.valueToJSON(nocoType.value),
       };
     }
   }
@@ -317,30 +315,30 @@ class NocoNode<
   toRenderable(
     getComponent: (id: string) => (...args: unknown[]) => unknown
   ): unknown {
-    const tag = this.tag;
+    const nocoType = this.type;
     let type: undefined | string | ((...args: unknown[]) => unknown);
-    if (typeof tag === "string") {
+    if (typeof nocoType === "string") {
       return this.toRenderableValue(this.value, getComponent);
-    } else if (tag.tag === TAGS.ELEMENT) {
-      const val = tag.value;
+    } else if (nocoType.type === TAGS.ELEMENT) {
+      const val = nocoType.value;
       if (typeof val !== "string") {
-        throw new Error(`Invalid element tag ${val}`);
+        throw new Error(`Invalid element type ${val}`);
       }
       type = val;
-    } else if (tag.tag === TAGS.COMPONENT) {
-      const val = tag.value;
+    } else if (nocoType.type === TAGS.COMPONENT) {
+      const val = nocoType.value;
       if (typeof val !== "string") {
-        throw new Error(`Invalid component tag ${val}`);
+        throw new Error(`Invalid component type ${val}`);
       }
       type = getComponent(val);
-    } else if (tag.tag === TAGS.TEXT) {
-      const val = tag.value;
+    } else if (nocoType.type === TAGS.TEXT) {
+      const val = nocoType.value;
       if (typeof val !== "string") {
-        throw new Error(`Invalid text tag ${val}`);
+        throw new Error(`Invalid text type ${val}`);
       }
       return val;
     } else {
-      throw new Error(`Invalid tag ${tag}`);
+      throw new Error(`Invalid type ${nocoType}`);
     }
     const props: Record<string, unknown> = {};
     if (this.attributes) {

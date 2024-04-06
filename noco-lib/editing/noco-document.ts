@@ -252,9 +252,10 @@ class NocoNode<
     options = { attr: /./, value: true }
   ) {
     callback(this);
+    // TODO: fix walk on values deep!
     if (options.attr) {
-      this.#attrs ??= new Attrs(this);
-      for (const [, value] of this.#attrs.entries()) {
+      for (const attr of this.attributes) {
+        const [, value] = attr.value;
         if (Array.isArray(value)) {
           value.forEach(
             (child) =>
@@ -262,6 +263,11 @@ class NocoNode<
           );
         } else if (NocoNode.isNocoNode(value)) {
           value.walkNoco(callback, options);
+        } else if (typeof value === "object") {
+          Object.values(value).forEach(
+            (child) =>
+              NocoNode.isNocoNode(child) && child.walkNoco(callback, options)
+          );
         }
       }
     }

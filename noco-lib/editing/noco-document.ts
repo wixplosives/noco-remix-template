@@ -262,7 +262,7 @@ class NocoNode<
         if (Array.isArray(value)) {
           value.forEach((child) => walkValue(child));
         } else if (NocoNode.isNocoNode(value)) {
-          walkValue(value.value);
+          value.walkNoco(callback, options);
         } else if (typeof value === "object" && value !== null) {
           Object.values(value).forEach((child) => walkValue(child));
         }

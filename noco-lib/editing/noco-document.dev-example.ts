@@ -1,7 +1,7 @@
 import { NocoDoc } from "./noco-document";
 
 if (typeof window !== "undefined") {
-  const docX = NocoDoc.fromJSON({
+  const data = {
     id: "UNIQUE_ID",
     __noco__type__: {
       id: "UNIQUE_ID",
@@ -46,34 +46,25 @@ if (typeof window !== "undefined") {
         ],
       },
     },
-  });
+  };
 
-  console.log("From Data");
-  console.log(docX.root.toRenderable(getComponent));
+  const docX = NocoDoc.fromJSON(data);
 
-  const doc = new NocoDoc();
+  console.log("ROOT", docX.root);
 
-  const el = doc.createElement("div", {
-    children: [
-      doc.createText("Hello, world!"),
-      doc.createElement("div", { children: [doc.createText("What's up?")] }),
-      doc.createComponent("Button"),
-    ],
-    slot: doc.createComponent("Avatar"),
-  });
-
-  el.walkNoco((node) => {
+  docX.root.walkNoco((node) => {
     if (node.isComponent()) {
       console.log("Component", node.nodeID, node);
     }
   });
 
-  console.log("Full format");
-  console.log(el.toJSON());
+  console.log("Stored Format");
+  console.log(docX.root.toJSON(), deepEqual(docX.root.toJSON(), data));
 
   console.log("Renderable format");
-  console.log(el.toRenderable(getComponent));
+  console.log(docX.root.toRenderable(getComponent));
 }
+
 function getComponent(id: string) {
   return new Function(
     `return function ${id.replace(
@@ -81,4 +72,31 @@ function getComponent(id: string) {
       "_"
     )}() { return "Hello, world!"; }`
   )();
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function deepEqual(obj1: any, obj2: any) {
+  let keys1 = Object.keys(obj1);
+  let keys2 = Object.keys(obj2);
+  //filter undefined keys
+  keys1 = keys1.filter((key) => obj1[key] !== undefined);
+  keys2 = keys2.filter((key) => obj2[key] !== undefined);
+  if (keys1.length !== keys2.length) {
+    return false;
+  }
+  for (const key of keys1) {
+    if (!Object.prototype.hasOwnProperty.call(obj2, key)) {
+      return false;
+    }
+    if (typeof obj1[key] === "object" && typeof obj2[key] === "object") {
+      if (!deepEqual(obj1[key], obj2[key])) {
+        return false;
+      }
+    } else {
+      if (obj1[key] !== obj2[key]) {
+        return false;
+      }
+    }
+  }
+  return true;
 }

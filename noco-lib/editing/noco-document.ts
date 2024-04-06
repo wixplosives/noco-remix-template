@@ -29,11 +29,13 @@ type NocoStoredValue =
     }
   | readonly NocoStoredValue[];
 
+type NocoStoredTag =
+  | string
+  | { id: string; __noco__type__: string; value: NocoStoredValue };
+
 type NocoStoredNode = {
   id: string;
-  __noco__type__:
-    | string
-    | { id: string; __noco__type__: string; value: string };
+  __noco__type__: NocoStoredTag;
   value?: NocoStoredValue;
   props?: Record<string, NocoStoredNode>;
   parentID?: string;
@@ -288,24 +290,42 @@ class NocoNode<
 
       props: this.attributes.length
         ? this.attributes.reduce((acc, attr) => {
-            const [k, v] = attr.value;
-            acc[k] = v.toJSON(options);
+            const [key, node] = attr.value;
+            acc[key] = node.toJSON(options);
             return acc;
           }, {} as NonNullable<NocoStoredNode["props"]>)
         : undefined,
-      value: Array.isArray(this.value)
-        ? // TODO: handle object and array values
-          this.value.map((child) =>
-            NocoNode.isNocoNode(child) ? child.toJSON(options) : child
-          )
-        : NocoNode.isNocoNode(this.value)
-        ? this.value.toJSON(options)
-        : this.value,
-
+      value: this.valueToJSON(this.value),
       ...(options.parentIds && this.parent && { parentID: this.parent.id }),
     };
   }
-  toRenderableValue(
+  tagToJSON(tag: NocoTag): NocoStoredTag {
+    if (typeof tag === "string") {
+      return tag;
+    } else {
+      return {
+        id: tag.id,
+        __noco__type__: tag.tag,
+        value: this.valueToJSON(tag.value),
+      };
+    }
+  }
+  valueToJSON(value: NocoNodeValue): NocoStoredValue {
+    // TODO: create typed isNocoIsNocoValueArray to avoid the any that isArray is returning
+    if (Array.isArray(value)) {
+      return value.map((child) => this.valueToJSON(child));
+    } else if (NocoNode.isNocoNode(value)) {
+      return value.toJSON();
+    } else if (typeof value === "object" && value !== null) {
+      return Object.entries(value).reduce((acc, [key, value]) => {
+        acc[key] = this.valueToJSON(value);
+        return acc;
+      }, {} as Record<string, unknown>);
+    } else {
+      return value;
+    }
+  }
+  private toRenderableValue(
     value: NocoNodeValue,
     getComponent: (id: string) => (...args: unknown[]) => unknown
   ): unknown {
@@ -346,8 +366,8 @@ class NocoNode<
     }
     const props: Record<string, unknown> = {};
     for (const attr of this.attributes) {
-      const [key, value] = attr.value;
-      props[key] = value.toRenderable(getComponent);
+      const [key, node] = attr.value;
+      props[key] = node.toRenderable(getComponent);
     }
 
     return {

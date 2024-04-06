@@ -109,7 +109,7 @@ export class NocoDoc {
   }
   private createNode<T extends string | NocoNode<string>>(
     tag: T,
-    attributes: NocoAttributeNode[],
+    attributes: NocoAttributes,
     nodeValue?: NocoNodeValue,
     nodeId?: string
   ) {
@@ -172,15 +172,7 @@ class Attrs {
     this.indexKeys(owner.attributes);
   }
   getAttribute(key: string) {
-    const attr = this.byKey.get(key);
-    if (!attr) {
-      return undefined;
-    }
-    if (Array.isArray(attr.value) && attr.value.length === 2) {
-      return attr.value[1];
-    } else {
-      throw new Error("Invalid attribute value");
-    }
+    return this.byKey.get(key)?.value[1];
   }
   *entries() {
     for (const key of this.byKey.keys()) {
@@ -201,8 +193,6 @@ class Attrs {
   }
 }
 
-type NocoTag = string | NocoNode<string>;
-
 type NocoNodeValue =
   | NocoValueConstraints
   | NocoNode
@@ -221,6 +211,9 @@ type NocoComponentNode = NocoNode<
   never
 >;
 
+type NocoTag = string | NocoNode<string>;
+type NocoAttributes = NocoAttributeNode[] | undefined;
+
 class NocoNode<
   Tag extends NocoTag = NocoTag,
   Value extends NocoNodeValue = NocoNodeValue
@@ -232,17 +225,14 @@ class NocoNode<
   constructor(
     public doc: NocoDoc,
     private tag: Tag,
-    public attributes: NocoAttributeNode[] | undefined,
+    public attributes: NocoAttributes,
     public value: Value,
     public id: string = doc.idGen(),
     public parent: NocoNode | null = null
   ) {
     this.initParents(attributes, value);
   }
-  private initParents(
-    attributes?: NocoAttributeNode[],
-    nodeValue?: NocoNodeValue
-  ) {
+  private initParents(attributes: NocoAttributes, nodeValue: NocoNodeValue) {
     attributes?.forEach((attr) => attr.setParent(this));
     if (Array.isArray(nodeValue)) {
       nodeValue.forEach(

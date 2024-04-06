@@ -252,34 +252,22 @@ class NocoNode<
     options = { attr: /./, value: true }
   ) {
     callback(this);
-    // TODO: fix walk on values deep!
     if (options.attr) {
       for (const attr of this.attributes) {
-        const [, value] = attr.value;
-        if (Array.isArray(value)) {
-          value.forEach(
-            (child) =>
-              NocoNode.isNocoNode(child) && child.walkNoco(callback, options)
-          );
-        } else if (NocoNode.isNocoNode(value)) {
-          value.walkNoco(callback, options);
-        } else if (typeof value === "object") {
-          Object.values(value).forEach(
-            (child) =>
-              NocoNode.isNocoNode(child) && child.walkNoco(callback, options)
-          );
-        }
+        attr.value[1].walkNoco(callback, options);
       }
     }
     if (options.value) {
-      if (Array.isArray(this.value)) {
-        this.value.forEach(
-          (child) =>
-            NocoNode.isNocoNode(child) && child.walkNoco(callback, options)
-        );
-      } else if (NocoNode.isNocoNode(this.value)) {
-        this.value.walkNoco(callback, options);
-      }
+      const walkValue = (value: NocoNodeValue) => {
+        if (Array.isArray(value)) {
+          value.forEach((child) => walkValue(child));
+        } else if (NocoNode.isNocoNode(value)) {
+          walkValue(value.value);
+        } else if (typeof value === "object" && value !== null) {
+          Object.values(value).forEach((child) => walkValue(child));
+        }
+      };
+      walkValue(this.value);
     }
   }
   toJSON(options = { parentIds: false }): NocoStoredNode {

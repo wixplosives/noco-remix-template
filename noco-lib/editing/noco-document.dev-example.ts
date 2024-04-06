@@ -42,34 +42,49 @@ if (typeof window !== "undefined") {
     },
   };
 
+  // Example: creating a NocoDoc from raw pojo
   const docX = NocoDoc.fromJSON(data);
 
   console.log("ROOT", docX.root);
 
+  // Example: walking the tree querying for components
   docX.root.walkNoco((node) => {
     if (node.isComponent()) {
       console.log("Component", node.id, node);
     }
   });
 
-  console.log("Stored Format");
-  console.log(docX.root.toJSON(), deepEqual(docX.root.toJSON(), data));
+  // Example: input and output the same data
+  console.log(
+    "Stored Format",
+    docX.root.toJSON(),
+    deepEqual(docX.root.toJSON(), data)
+  );
 
-  console.log("Renderable format");
-  console.log(docX.root.toRenderable(getComponent));
+  // Example: renderable format
+  console.log("Renderable format", docX.root.toRenderable(getComponent));
 
-  const valueNode = docX.createValue({
-    name: "John Doe",
-    age: 30,
-    friends: ["Jane", "Jack", "Jill"],
-    address: {
-      street: "123 Main St",
-      city: "Springfield",
-      state: "IL",
-    },
+  // Example: creating a value node from raw pojo
+  console.log(
+    "Value Node",
+    docX.createValue({
+      name: "John Doe",
+      age: 30,
+      friends: ["Jane", "Jack", "Jill"],
+      address: {
+        street: "123 Main St",
+        city: "Springfield",
+        state: "IL",
+      },
+    })
+  );
+
+  // Example: listening for changes on the document
+  docX.onChange.add((event) => {
+    console.log("Change", event);
   });
 
-  console.log("Value Node", valueNode);
+  docX.root.setAttribute("title", docX.createValue("New Title"));
 }
 
 function getComponent(id: string) {

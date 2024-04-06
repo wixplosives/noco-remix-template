@@ -45,9 +45,11 @@ type NocoComponentNode = NocoNode<typeof TAGS.COMPONENT, string>;
 
 type NocoAttributes = Record<string, NocoNode> | undefined;
 
-type TODO_MUTATION_EVENTS =
-  | { node: NocoNode; change: string; value: unknown }
-  | string;
+type TODO_MUTATION_EVENTS = {
+  node: NocoNode;
+  change: string;
+  [key: string]: unknown;
+};
 
 class Signal<T> extends Set<(value: T) => void> {
   emit(value: T) {
@@ -84,7 +86,7 @@ export class NocoDoc {
         throw new Error("Value node has no attributes to set");
       }
       node.attributes[key] = value;
-      this.onChange.emit({ node, change: "setAttribute", value });
+      this.onChange.emit({ node, change: "setAttribute", key, value });
     },
     removeAttribute: (node: NocoNode, key: string) => {
       if (!node.attributes) {

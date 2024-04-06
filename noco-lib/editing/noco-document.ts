@@ -1,5 +1,3 @@
-import { idGen } from "./id-gen";
-
 const TAGS = {
   // render components
   COMPONENT: "#component",
@@ -66,7 +64,7 @@ export class NocoDoc {
     }
     return doc;
   }
-  idGen = idGen("c");
+  idGen = () => crypto.randomUUID();
   root = this.createComponent("noco/default-page");
   setRoot(node: NocoNode<NocoNode<typeof TAGS.COMPONENT, string>, never>) {
     this.root = node;

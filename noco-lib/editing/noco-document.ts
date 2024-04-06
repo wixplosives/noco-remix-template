@@ -3,8 +3,6 @@ import { idGen } from "./id-gen";
 const TAGS = {
   COMPONENT: "#component",
   ELEMENT: "#element",
-  // value nodes
-  ATTR: "#attr",
   TEXT: "#text",
   // boxed value nodes
   ARRAY: "#array",
@@ -71,9 +69,12 @@ export class NocoDoc {
             nocoData.__noco__type__.value,
             nocoData.__noco__type__.id
           );
-    const attrs = Object.entries(nocoData.props ?? {}).map(([key, value]) => {
-      return this.createAttribute(key, this.toNocoNode(value));
-    });
+    const attrs = nocoData.props
+      ? Object.entries(nocoData.props).reduce((acc, [key, value]) => {
+          acc[key] = this.toNocoNode(value);
+          return acc;
+        }, {} as NonNullable<NocoAttributes>)
+      : undefined;
     return this.createNode(
       tag,
       attrs,
@@ -122,19 +123,17 @@ export class NocoDoc {
   ): NocoNode<T, V> {
     return new NocoNode(this, tag, undefined, value, nodeId);
   }
-  createAttribute(key: string, value: NocoNode) {
-    return this.createValueNode(TAGS.ATTR, [key, value] as const);
-  }
   createText(value: string | NocoNode) {
-    return this.createValueNode(TAGS.TEXT, value);
+    const tag = this.createValueNode(TAGS.TEXT, value);
+    return this.createNode(tag, {});
   }
   createElement(tagName: string) {
     const tag = this.createValueNode(TAGS.ELEMENT, tagName);
-    return this.createNode(tag, []);
+    return this.createNode(tag, {});
   }
   createComponent(componentId: string) {
     const tag = this.createValueNode(TAGS.COMPONENT, componentId);
-    return this.createNode(tag, []);
+    return this.createNode(tag, {});
   }
   createValue(value: NocoValueConstraints): NocoNode<string, NocoNodeValue> {
     if (Array.isArray(value)) {
@@ -166,33 +165,6 @@ export class NocoDoc {
   }
 }
 
-class Attrs {
-  private byKey = new Map<string, NocoAttributeNode>();
-  constructor(public owner: NocoNode) {
-    this.indexKeys(owner.attributes);
-  }
-  getAttribute(key: string) {
-    return this.byKey.get(key)?.value[1];
-  }
-  *entries() {
-    for (const key of this.byKey.keys()) {
-      yield [key, this.getAttribute(key)] as const;
-    }
-  }
-  private indexKeys(args: NocoAttributeNode[] = []) {
-    for (const attr of args) {
-      if (!Array.isArray(attr.value)) {
-        throw new Error("Invalid attribute value");
-      }
-      const [key] = attr.value;
-      if (typeof key !== "string") {
-        throw new Error("Invalid attribute key");
-      }
-      this.byKey.set(key, attr);
-    }
-  }
-}
-
 type NocoNodeValue =
   | NocoValueConstraints
   | NocoNode
@@ -201,18 +173,13 @@ type NocoNodeValue =
     }
   | readonly NocoNodeValue[];
 
-type NocoAttributeNode = NocoNode<
-  typeof TAGS.ATTR,
-  readonly [string, NocoNode]
->;
-
 type NocoComponentNode = NocoNode<
   NocoNode<typeof TAGS.COMPONENT, string>,
   never
 >;
 
 type NocoTag = string | NocoNode<string>;
-type NocoAttributes = NocoAttributeNode[] | undefined;
+type NocoAttributes = Record<string, NocoNode> | undefined;
 
 class NocoNode<
   Tag extends NocoTag = NocoTag,
@@ -221,7 +188,6 @@ class NocoNode<
   static isNocoNode(node: unknown): node is NocoNode {
     return node instanceof NocoNode;
   }
-  #attrs: Attrs | undefined;
   constructor(
     public doc: NocoDoc,
     private tag: Tag,
@@ -233,7 +199,9 @@ class NocoNode<
     this.initParents(attributes, value);
   }
   private initParents(attributes: NocoAttributes, nodeValue: NocoNodeValue) {
-    attributes?.forEach((attr) => attr.setParent(this));
+    if (attributes) {
+      Object.values(attributes).forEach((attr) => attr.setParent(this));
+    }
     if (Array.isArray(nodeValue)) {
       nodeValue.forEach(
         (child) => NocoNode.isNocoNode(child) && child.setParent(this)
@@ -245,9 +213,6 @@ class NocoNode<
   isComponent(): this is NocoComponentNode {
     return typeof this.tag !== "string" && this.tag.tag === TAGS.COMPONENT;
   }
-  isAttribute(): this is NocoAttributeNode {
-    return typeof this.tag === "string" && this.tag === TAGS.ATTR;
-  }
   getTag() {
     if (typeof this.tag === "string") {
       return this.tag;
@@ -256,8 +221,7 @@ class NocoNode<
     }
   }
   getAttribute(name: string) {
-    this.#attrs ??= new Attrs(this);
-    return this.#attrs.getAttribute(name);
+    return this.attributes?.[name];
   }
   setParent(parent: NocoNode | null) {
     this.parent = parent;
@@ -268,8 +232,8 @@ class NocoNode<
   ) {
     callback(this);
     if (options.attr && this.attributes) {
-      for (const attr of this.attributes) {
-        attr.value[1].walkNoco(callback, options);
+      for (const node of Object.values(this.attributes)) {
+        node.walkNoco(callback, options);
       }
     }
     if (options.value) {
@@ -296,13 +260,14 @@ class NocoNode<
               __noco__type__: this.tag.tag,
               value: this.tag.value as string,
             },
-
-      props: this.attributes?.reduce((acc, attr) => {
-        const [key, node] = attr.value;
-        acc[key] = node.toJSON(options);
-        return acc;
-      }, {} as NonNullable<NocoStoredNode["props"]>),
+      props: this.attributes
+        ? Object.entries(this.attributes).reduce((acc, [key, node]) => {
+            acc[key] = node.toJSON(options);
+            return acc;
+          }, {} as NonNullable<NocoStoredNode["props"]>)
+        : undefined,
       value: this.valueToJSON(this.value),
+      // Extra options
       ...(options.parentIds && this.parent && { parentID: this.parent.id }),
     };
   }
@@ -368,13 +333,18 @@ class NocoNode<
         throw new Error(`Invalid component tag ${val}`);
       }
       type = getComponent(val);
+    } else if (tag.tag === TAGS.TEXT) {
+      const val = tag.value;
+      if (typeof val !== "string") {
+        throw new Error(`Invalid text tag ${val}`);
+      }
+      return val;
     } else {
       throw new Error(`Invalid tag ${tag}`);
     }
     const props: Record<string, unknown> = {};
     if (this.attributes) {
-      for (const attr of this.attributes) {
-        const [key, node] = attr.value;
+      for (const [key, node] of Object.entries(this.attributes)) {
         props[key] = node.toRenderable(getComponent);
       }
     }

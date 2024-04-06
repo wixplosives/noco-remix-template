@@ -118,7 +118,7 @@ export class NocoDoc {
     value: V,
     nodeId?: string
   ): NocoNode<T, V> {
-    return new NocoNode(this, tag, [], value, nodeId);
+    return new NocoNode(this, tag, undefined, value, nodeId);
   }
   createAttribute(key: string, value: NocoNode) {
     return this.createValueNode(TAGS.ATTR, [key, value] as const);
@@ -157,7 +157,7 @@ class Attrs {
       yield [key, this.getAttribute(key)] as const;
     }
   }
-  private indexKeys(args: NocoAttributeNode[]) {
+  private indexKeys(args: NocoAttributeNode[] = []) {
     for (const attr of args) {
       if (!Array.isArray(attr.value)) {
         throw new Error("Invalid attribute value");
@@ -207,7 +207,7 @@ class NocoNode<
   constructor(
     public owner: NocoDoc,
     private tag: Tag,
-    public attributes: NocoAttributeNode[],
+    public attributes: NocoAttributeNode[] | undefined,
     public value: Value,
     public id: string = owner.idGen(),
     public parent: NocoNode | null = null
@@ -215,10 +215,10 @@ class NocoNode<
     this.initParents(attributes, value);
   }
   private initParents(
-    attributes: NocoAttributeNode[],
+    attributes?: NocoAttributeNode[],
     nodeValue?: NocoNodeValue
   ) {
-    attributes.forEach((attr) => attr.setParent(this));
+    attributes?.forEach((attr) => attr.setParent(this));
     if (Array.isArray(nodeValue)) {
       nodeValue.forEach(
         (child) => NocoNode.isNocoNode(child) && child.setParent(this)
@@ -252,7 +252,7 @@ class NocoNode<
     options = { attr: /./, value: true }
   ) {
     callback(this);
-    if (options.attr) {
+    if (options.attr && this.attributes) {
       for (const attr of this.attributes) {
         attr.value[1].walkNoco(callback, options);
       }
@@ -282,13 +282,11 @@ class NocoNode<
               value: this.tag.value as string,
             },
 
-      props: this.attributes.length
-        ? this.attributes.reduce((acc, attr) => {
-            const [key, node] = attr.value;
-            acc[key] = node.toJSON(options);
-            return acc;
-          }, {} as NonNullable<NocoStoredNode["props"]>)
-        : undefined,
+      props: this.attributes?.reduce((acc, attr) => {
+        const [key, node] = attr.value;
+        acc[key] = node.toJSON(options);
+        return acc;
+      }, {} as NonNullable<NocoStoredNode["props"]>),
       value: this.valueToJSON(this.value),
       ...(options.parentIds && this.parent && { parentID: this.parent.id }),
     };
@@ -359,9 +357,11 @@ class NocoNode<
       throw new Error(`Invalid tag ${tag}`);
     }
     const props: Record<string, unknown> = {};
-    for (const attr of this.attributes) {
-      const [key, node] = attr.value;
-      props[key] = node.toRenderable(getComponent);
+    if (this.attributes) {
+      for (const attr of this.attributes) {
+        const [key, node] = attr.value;
+        props[key] = node.toRenderable(getComponent);
+      }
     }
 
     return {

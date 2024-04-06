@@ -305,48 +305,30 @@ class NocoNode<
       ...(options.parentIds && this.parent && { parentID: this.parent.id }),
     };
   }
+  toRenderableValue(
+    value: NocoNodeValue,
+    getComponent: (id: string) => (...args: unknown[]) => unknown
+  ): unknown {
+    if (Array.isArray(value)) {
+      return value.map((child) => this.toRenderableValue(child, getComponent));
+    } else if (NocoNode.isNocoNode(value)) {
+      return value.toRenderable(getComponent);
+    } else if (typeof value === "object" && value !== null) {
+      return Object.entries(value).reduce((acc, [key, value]) => {
+        acc[key] = this.toRenderableValue(value, getComponent);
+        return acc;
+      }, {} as Record<string, unknown>);
+    } else {
+      return value;
+    }
+  }
   toRenderable(
     getComponent: (id: string) => (...args: unknown[]) => unknown
   ): unknown {
     const tag = this.tag;
     let type: undefined | string | ((...args: unknown[]) => unknown);
     if (typeof tag === "string") {
-      if (tag === TAGS.TEXT) {
-        return this.value;
-      } else if (
-        tag === TAGS.STRING ||
-        tag === TAGS.NUMBER ||
-        tag === TAGS.BOOLEAN ||
-        tag === TAGS.NULL ||
-        tag === TAGS.UNDEFINED
-      ) {
-        return this.value;
-      } else if (tag === TAGS.ARRAY) {
-        if (Array.isArray(this.value)) {
-          return this.value.map(
-            (child) =>
-              NocoNode.isNocoNode(child)
-                ? child.toRenderable(getComponent)
-                : child // TODO: handle object and array values
-          );
-        } else {
-          throw new Error(`Invalid array value ${this.value}`);
-        }
-      } else if (tag === TAGS.OBJECT) {
-        if (typeof this.value === "object" && this.value !== null) {
-          return Object.entries(this.value).reduce((acc, [key, value]) => {
-            acc[key] = NocoNode.isNocoNode(value)
-              ? // TODO: handle object and array values
-                value.toRenderable(getComponent)
-              : value;
-            return acc;
-          }, {} as Record<string, unknown>);
-        } else {
-          throw new Error(`Invalid object value ${this.value}`);
-        }
-      } else {
-        throw new Error(`Invalid tag ${tag}`);
-      }
+      return this.toRenderableValue(this.value, getComponent);
     } else if (tag.tag === TAGS.ELEMENT) {
       const val = tag.value;
       if (typeof val !== "string") {
@@ -363,18 +345,9 @@ class NocoNode<
       throw new Error(`Invalid tag ${tag}`);
     }
     const props: Record<string, unknown> = {};
-    this.#attrs ??= new Attrs(this);
-
-    for (const [key, value] of this.#attrs.entries()) {
-      if (Array.isArray(value)) {
-        props[key] = value.map((child) =>
-          NocoNode.isNocoNode(child) ? child.toRenderable(getComponent) : child
-        );
-      } else if (NocoNode.isNocoNode(value)) {
-        props[key] = value.toRenderable(getComponent);
-      } else {
-        props[key] = value;
-      }
+    for (const attr of this.attributes) {
+      const [key, value] = attr.value;
+      props[key] = value.toRenderable(getComponent);
     }
 
     return {

@@ -45,6 +45,18 @@ type NocoComponentNode = NocoNode<typeof TAGS.COMPONENT, string>;
 
 type NocoAttributes = Record<string, NocoNode> | undefined;
 
+type TODO_MUTATION_EVENTS =
+  | { node: NocoNode; change: string; value: unknown }
+  | string;
+
+class Signal<T> extends Set<(value: T) => void> {
+  emit(value: T) {
+    for (const listener of this) {
+      listener(value);
+    }
+  }
+}
+
 export class NocoDoc {
   static fromJSON(nocoData: NocoStoredNode) {
     if (typeof nocoData !== "object" || nocoData === null) {
@@ -59,8 +71,29 @@ export class NocoDoc {
     }
     return doc;
   }
+  onChange = new Signal<TODO_MUTATION_EVENTS>();
   idGen = () => crypto.randomUUID();
   root = this.createComponent("noco/default-page");
+  mutations = {
+    set: (node: NocoNode, value: NocoNodeValue) => {
+      node.value = value;
+      this.onChange.emit({ node, change: "set", value });
+    },
+    setAttribute: (node: NocoNode, key: string, value: NocoNode) => {
+      if (!node.attributes) {
+        throw new Error("Value node has no attributes to set");
+      }
+      node.attributes[key] = value;
+      this.onChange.emit({ node, change: "setAttribute", value });
+    },
+    removeAttribute: (node: NocoNode, key: string) => {
+      if (!node.attributes) {
+        throw new Error("Value node has no attributes to remove");
+      }
+      delete node.attributes[key];
+      this.onChange.emit({ node, change: "removeAttribute", value: key });
+    },
+  };
   setRoot(node: NocoComponentNode) {
     this.root = node;
   }
@@ -189,18 +222,27 @@ class NocoNode<
       nodeValue.setParent(this);
     }
   }
-  setValue(value: V) {
-    this.value = value;
-  }
   isComponent(): this is NocoComponentNode {
     return this.type === TAGS.COMPONENT;
   }
   getAttribute(name: string) {
     return this.attributes?.[name];
   }
+  //// Mutations
+  setValue(value: V) {
+    this.doc.mutations.set(this, value);
+  }
+  setAttribute(name: string, value: NocoNode) {
+    this.doc.mutations.setAttribute(this, name, value);
+  }
+  removeAttribute(name: string) {
+    this.doc.mutations.removeAttribute(this, name);
+  }
+  ////////////////////////////////////////////////////////
   setParent(parent: NocoNode | null) {
     this.parent = parent;
   }
+
   walkNoco(
     callback: (node: NocoNode) => void,
     options = { attr: /./, value: true }

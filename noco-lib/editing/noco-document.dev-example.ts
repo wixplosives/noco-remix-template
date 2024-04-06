@@ -54,7 +54,7 @@ if (typeof window !== "undefined") {
 
   docX.root.walkNoco((node) => {
     if (node.isComponent()) {
-      console.log("Component", node.nodeID, node);
+      console.log("Component", node.id, node);
     }
   });
 

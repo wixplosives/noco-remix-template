@@ -142,8 +142,8 @@ class Attrs {
     if (!attr) {
       return undefined;
     }
-    if (Array.isArray(attr.nodeValue) && attr.nodeValue.length === 2) {
-      return attr.nodeValue[1];
+    if (Array.isArray(attr.value) && attr.value.length === 2) {
+      return attr.value[1];
     } else {
       throw new Error("Invalid attribute value");
     }
@@ -155,10 +155,10 @@ class Attrs {
   }
   private indexKeys(args: NocoAttributeNode[]) {
     args.forEach((attr) => {
-      if (!Array.isArray(attr.nodeValue)) {
+      if (!Array.isArray(attr.value)) {
         throw new Error("Invalid attribute value");
       }
-      const [key] = attr.nodeValue;
+      const [key] = attr.value;
       if (typeof key !== "string") {
         throw new Error("Invalid attribute key");
       }
@@ -204,11 +204,11 @@ class NocoNode<
     public owner: NocoDoc,
     private tag: Tag,
     public attributes: NocoAttributeNode[],
-    public nodeValue: Value,
-    public nodeID: string = owner.idGen(),
+    public value: Value,
+    public id: string = owner.idGen(),
     public parent: NocoNode | null = null
   ) {
-    this.initParents(attributes, nodeValue);
+    this.initParents(attributes, value);
   }
   private initParents(
     attributes: NocoAttributeNode[],
@@ -245,7 +245,7 @@ class NocoNode<
   }
   walkNoco(
     callback: (node: NocoNode) => void,
-    options = { attr: /./, nodeValue: true }
+    options = { attr: /./, value: true }
   ) {
     callback(this);
     if (options.attr) {
@@ -261,45 +261,45 @@ class NocoNode<
         }
       }
     }
-    if (options.nodeValue) {
-      if (Array.isArray(this.nodeValue)) {
-        this.nodeValue.forEach(
+    if (options.value) {
+      if (Array.isArray(this.value)) {
+        this.value.forEach(
           (child) =>
             NocoNode.isNocoNode(child) && child.walkNoco(callback, options)
         );
-      } else if (NocoNode.isNocoNode(this.nodeValue)) {
-        this.nodeValue.walkNoco(callback, options);
+      } else if (NocoNode.isNocoNode(this.value)) {
+        this.value.walkNoco(callback, options);
       }
     }
   }
   toJSON(options = { parentIds: false }): NocoStoredNode {
     return {
-      id: this.nodeID,
+      id: this.id,
       __noco__type__:
         typeof this.tag === "string"
           ? this.tag
           : {
-              id: this.tag.nodeID,
+              id: this.tag.id,
               __noco__type__: this.tag.tag,
-              value: this.tag.nodeValue as string,
+              value: this.tag.value as string,
             },
 
       props: this.attributes.length
         ? this.attributes.reduce((acc, attr) => {
-            const [k, v] = attr.nodeValue;
+            const [k, v] = attr.value;
             acc[k] = v.toJSON(options);
             return acc;
           }, {} as NonNullable<NocoStoredNode["props"]>)
         : undefined,
-      value: Array.isArray(this.nodeValue)
-        ? this.nodeValue.map((child) =>
+      value: Array.isArray(this.value)
+        ? this.value.map((child) =>
             NocoNode.isNocoNode(child) ? child.toJSON(options) : child
           )
-        : NocoNode.isNocoNode(this.nodeValue)
-        ? this.nodeValue.toJSON(options)
-        : this.nodeValue,
+        : NocoNode.isNocoNode(this.value)
+        ? this.value.toJSON(options)
+        : this.value,
 
-      ...(options.parentIds && this.parent && { parentID: this.parent.nodeID }),
+      ...(options.parentIds && this.parent && { parentID: this.parent.id }),
     };
   }
   toRenderable(
@@ -309,7 +309,7 @@ class NocoNode<
     let type: undefined | string | ((...args: unknown[]) => unknown);
     if (typeof tag === "string") {
       if (tag === TAGS.TEXT) {
-        return this.nodeValue;
+        return this.value;
       } else if (
         tag === TAGS.STRING ||
         tag === TAGS.NUMBER ||
@@ -317,39 +317,39 @@ class NocoNode<
         tag === TAGS.NULL ||
         tag === TAGS.UNDEFINED
       ) {
-        return this.nodeValue;
+        return this.value;
       } else if (tag === TAGS.ARRAY) {
-        if (Array.isArray(this.nodeValue)) {
-          return this.nodeValue.map((child) =>
+        if (Array.isArray(this.value)) {
+          return this.value.map((child) =>
             NocoNode.isNocoNode(child)
               ? child.toRenderable(getComponent)
               : child
           );
         } else {
-          throw new Error(`Invalid array value ${this.nodeValue}`);
+          throw new Error(`Invalid array value ${this.value}`);
         }
       } else if (tag === TAGS.OBJECT) {
-        if (typeof this.nodeValue === "object" && this.nodeValue !== null) {
-          return Object.entries(this.nodeValue).reduce((acc, [key, value]) => {
+        if (typeof this.value === "object" && this.value !== null) {
+          return Object.entries(this.value).reduce((acc, [key, value]) => {
             acc[key] = NocoNode.isNocoNode(value)
               ? value.toRenderable(getComponent)
               : value;
             return acc;
           }, {} as Record<string, unknown>);
         } else {
-          throw new Error(`Invalid object value ${this.nodeValue}`);
+          throw new Error(`Invalid object value ${this.value}`);
         }
       } else {
         throw new Error(`Invalid tag ${tag}`);
       }
     } else if (tag.tag === TAGS.ELEMENT) {
-      const val = tag.nodeValue;
+      const val = tag.value;
       if (typeof val !== "string") {
         throw new Error(`Invalid element tag ${val}`);
       }
       type = val;
     } else if (tag.tag === TAGS.COMPONENT) {
-      const val = tag.nodeValue;
+      const val = tag.value;
       if (typeof val !== "string") {
         throw new Error(`Invalid component tag ${val}`);
       }
@@ -373,7 +373,7 @@ class NocoNode<
     }
 
     return {
-      key: this.nodeID,
+      key: this.id,
       type: type,
       props,
     };

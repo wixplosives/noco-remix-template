@@ -1,5 +1,14 @@
 import { idGen } from "./id-gen";
 
+const TAGS = {
+  COMPONENT: "#component",
+  ELEMENT: "#element",
+  ATTR: "#attr",
+  TEXT: "#text",
+  ARRAY: "#array",
+  STRING: "#string",
+} as const;
+
 type NocoStoredData = {
   id: string;
   __noco__type__:
@@ -46,13 +55,13 @@ export class NocoDoc {
   root = this.createComponent("noco/default-page");
   createNode<T extends string | NocoNode<string>>(
     tag: T,
-    attributes: Array<NocoNode<"#attribute">>,
+    attributes: Array<NocoNode<typeof TAGS.ATTR>>,
     nodeValue?: NocoNodeValue,
     nodeId?: string
   ) {
     return new NocoNode(this, tag, attributes, nodeValue, nodeId);
   }
-  setRoot(node: NocoNode<NocoNode<"#component">>) {
+  setRoot(node: NocoNode<NocoNode<typeof TAGS.COMPONENT>>) {
     this.root = node;
   }
   createValueNode<const T extends string>(
@@ -63,13 +72,13 @@ export class NocoDoc {
     return new NocoNode(this, tag, [], value, nodeId);
   }
   createAttribute(key: string, value: NocoNodeValue) {
-    return this.createValueNode("#attribute", [key, value]);
+    return this.createValueNode(TAGS.ATTR, [key, value]);
   }
   createText(value: string | NocoNode) {
-    return this.createValueNode("#text", value);
+    return this.createValueNode(TAGS.TEXT, value);
   }
   createElement(tagName: string, attrs?: Record<string, NocoNodeValue>) {
-    const tag = this.createValueNode("#dom-element", tagName);
+    const tag = this.createValueNode(TAGS.ELEMENT, tagName);
     return this.createNode(
       tag,
       attrs
@@ -80,13 +89,13 @@ export class NocoDoc {
     );
   }
   createComponent(componentId: string) {
-    const tag = this.createValueNode("#component", componentId);
+    const tag = this.createValueNode(TAGS.COMPONENT, componentId);
     return this.createNode(tag, []);
   }
 }
 
 class Attrs {
-  private byKey = new Map<string, NocoNode<"#attribute">>();
+  private byKey = new Map<string, NocoNode<typeof TAGS.ATTR>>();
   constructor(public owner: NocoNode) {
     this.indexKeys(owner.attributes);
   }
@@ -106,7 +115,7 @@ class Attrs {
       yield [key, this.getAttribute(key)] as const;
     }
   }
-  private indexKeys(args: NocoNode<"#attribute">[]) {
+  private indexKeys(args: NocoNode<typeof TAGS.ATTR>[]) {
     args.forEach((attr) => {
       if (!Array.isArray(attr.nodeValue)) {
         throw new Error("Invalid attribute value");
@@ -132,7 +141,7 @@ class NocoNode<
   constructor(
     public owner: NocoDoc,
     private tag: Tag,
-    public attributes: NocoNode<"#attribute">[],
+    public attributes: NocoNode<typeof TAGS.ATTR>[],
     public nodeValue?: NocoNodeValue,
     public nodeID: string = owner.idGen(),
     public parent: NocoNode | null = null
@@ -140,7 +149,7 @@ class NocoNode<
     this.initParents(attributes, nodeValue);
   }
   private initParents(
-    attributes: NocoNode<"#attribute">[],
+    attributes: NocoNode<typeof TAGS.ATTR>[],
     nodeValue?: NocoNodeValue
   ) {
     attributes.forEach((attr) => attr.setParent(this));
@@ -152,8 +161,8 @@ class NocoNode<
       nodeValue.setParent(this);
     }
   }
-  isComponent(): this is NocoNode<NocoNode<"#component">> {
-    return typeof this.tag !== "string" && this.tag.tag === "#component";
+  isComponent(): this is NocoNode<NocoNode<typeof TAGS.COMPONENT>> {
+    return typeof this.tag !== "string" && this.tag.tag === TAGS.COMPONENT;
   }
   getTag() {
     if (typeof this.tag === "string") {
@@ -224,11 +233,11 @@ class NocoNode<
     const tag = this.tag;
     let type: undefined | string | ((...args: unknown[]) => unknown);
     if (typeof tag === "string") {
-      if (tag === "#text") {
+      if (tag === TAGS.TEXT) {
         return this.nodeValue;
-      } else if (tag === "#string") {
+      } else if (tag === TAGS.STRING) {
         return this.nodeValue;
-      } else if (tag === "#array") {
+      } else if (tag === TAGS.ARRAY) {
         if (Array.isArray(this.nodeValue)) {
           return this.nodeValue.map((child) =>
             NocoNode.isNocoNode(child)
@@ -241,20 +250,20 @@ class NocoNode<
       } else {
         throw new Error(`Invalid tag ${tag}`);
       }
-    } else if (tag.tag === "#dom-element") {
+    } else if (tag.tag === TAGS.ELEMENT) {
       const val = tag.nodeValue;
       if (typeof val !== "string") {
-        throw new Error("Invalid tag value");
+        throw new Error(`Invalid element tag ${val}`);
       }
       type = val;
-    } else if (tag.tag === "#component") {
+    } else if (tag.tag === TAGS.COMPONENT) {
       const val = tag.nodeValue;
       if (typeof val !== "string") {
-        throw new Error("Invalid component ID");
+        throw new Error(`Invalid component tag ${val}`);
       }
       type = getComponent(val);
     } else {
-      throw new Error("Invalid tag");
+      throw new Error(`Invalid tag ${tag}`);
     }
     const props: Record<string, unknown> = {};
     this.#attrs ??= new Attrs(this);

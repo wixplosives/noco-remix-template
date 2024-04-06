@@ -1,18 +1,66 @@
 import { idGen } from "./id-gen";
 
-class NocoDoc {
+type NocoStoredData = {
+  id: string;
+  __noco__type__:
+    | string
+    | { id: string; __noco__type__: string; value: string };
+  value?: string | NocoStoredData[];
+  props?: Record<string, NocoStoredData>;
+};
+
+export class NocoDoc {
+  static fromJSON(nocoData: NocoStoredData) {
+    if (typeof nocoData !== "object" || nocoData === null) {
+      throw new Error("Invalid JSON");
+    }
+
+    const doc = new NocoDoc();
+    const node = toNocoNode(nocoData);
+    if (node.isComponent()) {
+      doc.setRoot(node);
+    } else {
+      throw new Error("Invalid root node is not a component");
+    }
+
+    function toNocoNode(nocoData: NocoStoredData): NocoNode {
+      const tag =
+        typeof nocoData.__noco__type__ === "string"
+          ? nocoData.__noco__type__
+          : doc.createValueNode(
+              nocoData.__noco__type__.__noco__type__,
+              nocoData.__noco__type__.value,
+              nocoData.__noco__type__.id
+            );
+      const attrs = Object.entries(nocoData.props ?? {}).map(([key, value]) => {
+        return doc.createAttribute(key, toNocoNode(value));
+      });
+      const nodeValue = Array.isArray(nocoData.value)
+        ? nocoData.value.map(toNocoNode)
+        : nocoData.value;
+      return doc.createNode(tag, attrs, nodeValue, nocoData.id);
+    }
+    return doc;
+  }
   idGen = idGen("c");
+  root = this.createComponent("noco/default-page");
   createNode<T extends string | NocoNode<string>>(
     tag: T,
-    attributes: Array<NocoNode<"#attribute">>
+    attributes: Array<NocoNode<"#attribute">>,
+    nodeValue?: NocoNodeValue,
+    nodeId?: string
   ) {
-    return new NocoNode(this, tag, attributes);
+    return new NocoNode(this, tag, attributes, nodeValue, nodeId);
+  }
+  setRoot(node: NocoNode<NocoNode<"#component">>) {
+    this.root = node;
   }
   createValueNode<const T extends string>(
     tag: T,
-    value: NocoNodeValue
+    value: NocoNodeValue,
+    nodeId?: string
   ): NocoNode<T> {
-    return new NocoNode(this, tag, [], value);
+    return new NocoNode(this, tag, [], value, nodeId);
   }
   createAttribute(key: string, value: NocoNodeValue) {
     return this.createValueNode("#attribute", [key, value]);
@@ -104,6 +152,9 @@ class NocoNode<
       nodeValue.setParent(this);
     }
   }
+  isComponent(): this is NocoNode<NocoNode<"#component">> {
+    return typeof this.tag !== "string" && this.tag.tag === "#component";
+  }
   getTag() {
     if (typeof this.tag === "string") {
       return this.tag;
@@ -167,14 +218,28 @@ class NocoNode<
       ...(options.parentIds && this.parent && { parentID: this.parent.nodeID }),
     };
   }
-  toRenderable(getComponent: (id: string) => (...args: unknown[]) => unknown) {
+  toRenderable(
+    getComponent: (id: string) => (...args: unknown[]) => unknown
+  ): unknown {
     const tag = this.tag;
     let type: undefined | string | ((...args: unknown[]) => unknown);
     if (typeof tag === "string") {
       if (tag === "#text") {
         return this.nodeValue;
+      } else if (tag === "#string") {
+        return this.nodeValue;
+      } else if (tag === "#array") {
+        if (Array.isArray(this.nodeValue)) {
+          return this.nodeValue.map((child) =>
+            NocoNode.isNocoNode(child)
+              ? child.toRenderable(getComponent)
+              : child
+          );
+        } else {
+          throw new Error(`Invalid array value ${this.nodeValue}`);
+        }
       } else {
-        throw new Error("Invalid tag");
+        throw new Error(`Invalid tag ${tag}`);
       }
     } else if (tag.tag === "#dom-element") {
       const val = tag.nodeValue;
@@ -212,47 +277,4 @@ class NocoNode<
       props,
     };
   }
-}
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-if (typeof window !== "undefined") {
-  const doc = new NocoDoc();
-
-  const el = doc.createElement("div", {
-    children: [
-      doc.createText("Hello, world!"),
-      doc.createElement("div", { children: [doc.createText("What's up?")] }),
-      doc.createComponent("Button"),
-    ],
-    slot: doc.createComponent("Avatar"),
-  });
-
-  el.walkNoco((node) => {
-    if (node.getTag() === "#component") {
-      console.log("Component", node.nodeID, node);
-    }
-  });
-
-  console.log("Full format");
-  console.log(el.toJSON());
-
-  console.log("Renderable format");
-
-  console.log(
-    el.toRenderable((id) => {
-      return new Function(
-        `return function ${id.replace(
-          /[^a-zA-Z0-9]/g,
-          "_"
-        )}() { return "Hello, world!"; }`
-      )();
-    })
-  );
 }

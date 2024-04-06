@@ -3,8 +3,10 @@ import { idGen } from "./id-gen";
 const TAGS = {
   COMPONENT: "#component",
   ELEMENT: "#element",
+  // value nodes
   ATTR: "#attr",
   TEXT: "#text",
+  // boxed value nodes
   ARRAY: "#array",
   STRING: "#string",
   BOOLEAN: "#boolean",
@@ -154,7 +156,7 @@ class Attrs {
     }
   }
   private indexKeys(args: NocoAttributeNode[]) {
-    args.forEach((attr) => {
+    for (const attr of args) {
       if (!Array.isArray(attr.value)) {
         throw new Error("Invalid attribute value");
       }
@@ -163,7 +165,7 @@ class Attrs {
         throw new Error("Invalid attribute key");
       }
       this.byKey.set(key, attr);
-    });
+    }
   }
 }
 
@@ -292,7 +294,8 @@ class NocoNode<
           }, {} as NonNullable<NocoStoredNode["props"]>)
         : undefined,
       value: Array.isArray(this.value)
-        ? this.value.map((child) =>
+        ? // TODO: handle object and array values
+          this.value.map((child) =>
             NocoNode.isNocoNode(child) ? child.toJSON(options) : child
           )
         : NocoNode.isNocoNode(this.value)
@@ -320,10 +323,11 @@ class NocoNode<
         return this.value;
       } else if (tag === TAGS.ARRAY) {
         if (Array.isArray(this.value)) {
-          return this.value.map((child) =>
-            NocoNode.isNocoNode(child)
-              ? child.toRenderable(getComponent)
-              : child
+          return this.value.map(
+            (child) =>
+              NocoNode.isNocoNode(child)
+                ? child.toRenderable(getComponent)
+                : child // TODO: handle object and array values
           );
         } else {
           throw new Error(`Invalid array value ${this.value}`);
@@ -332,7 +336,8 @@ class NocoNode<
         if (typeof this.value === "object" && this.value !== null) {
           return Object.entries(this.value).reduce((acc, [key, value]) => {
             acc[key] = NocoNode.isNocoNode(value)
-              ? value.toRenderable(getComponent)
+              ? // TODO: handle object and array values
+                value.toRenderable(getComponent)
               : value;
             return acc;
           }, {} as Record<string, unknown>);

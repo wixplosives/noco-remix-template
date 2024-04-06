@@ -3,11 +3,8 @@ import { NocoDoc } from "./noco-document";
 if (typeof window !== "undefined") {
   const data = {
     id: "UNIQUE_ID",
-    __noco__type__: {
-      id: "UNIQUE_ID",
-      __noco__type__: "#component",
-      value: "pageTemplates/defaultPageTemplate",
-    },
+    __noco__type__: "#component",
+    value: "pageTemplates/defaultPageTemplate",
     props: {
       title: {
         id: "UNIQUE_ID",
@@ -20,11 +17,8 @@ if (typeof window !== "undefined") {
         value: [
           {
             id: "UNIQUE_ID",
-            __noco__type__: {
-              id: "UNIQUE_ID",
-              __noco__type__: "#component",
-              value: "sections/hero",
-            },
+            __noco__type__: "#component",
+            value: "sections/hero",
             props: {
               title: {
                 id: "UNIQUE_ID",

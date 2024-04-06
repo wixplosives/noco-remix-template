@@ -16,13 +16,16 @@ const TAGS = {
   UNDEFINED: "#undefined",
 } as const;
 
-type NocoStoredValue =
+type NocoValueConstraints =
   | undefined
   | null
   | string
   | boolean
   | number
-  | object
+  | object;
+
+type NocoStoredValue =
+  | NocoValueConstraints
   | NocoStoredNode
   | {
       [key: string]: NocoStoredValue;
@@ -38,7 +41,6 @@ type NocoStoredNode = {
   __noco__type__: NocoStoredTag;
   value?: NocoStoredValue;
   props?: Record<string, NocoStoredNode>;
-  parentID?: string;
 };
 
 export class NocoDoc {
@@ -105,7 +107,7 @@ export class NocoDoc {
       value !== null && typeof value === "object" && "__noco__type__" in value
     );
   }
-  createNode<T extends string | NocoNode<string>>(
+  private createNode<T extends string | NocoNode<string>>(
     tag: T,
     attributes: NocoAttributeNode[],
     nodeValue?: NocoNodeValue,
@@ -113,7 +115,7 @@ export class NocoDoc {
   ) {
     return new NocoNode(this, tag, attributes, nodeValue, nodeId);
   }
-  createValueNode<const T extends string, V extends NocoNodeValue>(
+  private createValueNode<const T extends string, V extends NocoNodeValue>(
     tag: T,
     value: V,
     nodeId?: string
@@ -133,6 +135,34 @@ export class NocoDoc {
   createComponent(componentId: string) {
     const tag = this.createValueNode(TAGS.COMPONENT, componentId);
     return this.createNode(tag, []);
+  }
+  createValue(value: NocoValueConstraints): NocoNode<string, NocoNodeValue> {
+    if (Array.isArray(value)) {
+      return this.createValueNode(
+        TAGS.ARRAY,
+        value.map((val) => this.createValue(val))
+      );
+    } else if (typeof value === "object" && value !== null) {
+      return this.createValueNode(
+        TAGS.OBJECT,
+        Object.entries(value).reduce((acc, [key, value]) => {
+          acc[key] = this.createValue(value);
+          return acc;
+        }, {} as Record<string, NocoNodeValue>)
+      );
+    } else if (typeof value === "string") {
+      return this.createValueNode(TAGS.STRING, value);
+    } else if (typeof value === "number") {
+      return this.createValueNode(TAGS.NUMBER, value);
+    } else if (typeof value === "boolean") {
+      return this.createValueNode(TAGS.BOOLEAN, value);
+    } else if (value === null) {
+      return this.createValueNode(TAGS.NULL, null);
+    } else if (value === undefined) {
+      return this.createValueNode(TAGS.UNDEFINED, undefined);
+    } else {
+      throw new Error("Invalid value");
+    }
   }
 }
 
@@ -174,12 +204,7 @@ class Attrs {
 type NocoTag = string | NocoNode<string>;
 
 type NocoNodeValue =
-  | undefined
-  | null
-  | string
-  | boolean
-  | number
-  | object
+  | NocoValueConstraints
   | NocoNode
   | {
       [key: string]: NocoNodeValue;
@@ -205,11 +230,11 @@ class NocoNode<
   }
   #attrs: Attrs | undefined;
   constructor(
-    public owner: NocoDoc,
+    public doc: NocoDoc,
     private tag: Tag,
     public attributes: NocoAttributeNode[] | undefined,
     public value: Value,
-    public id: string = owner.idGen(),
+    public id: string = doc.idGen(),
     public parent: NocoNode | null = null
   ) {
     this.initParents(attributes, value);
@@ -317,7 +342,7 @@ class NocoNode<
       return value;
     }
   }
-  private toRenderableValue(
+  toRenderableValue(
     value: NocoNodeValue,
     getComponent: (id: string) => (...args: unknown[]) => unknown
   ): unknown {

@@ -63,6 +63,19 @@ if (typeof window !== "undefined") {
 
   console.log("Renderable format");
   console.log(docX.root.toRenderable(getComponent));
+
+  const valueNode = docX.createValue({
+    name: "John Doe",
+    age: 30,
+    friends: ["Jane", "Jack", "Jill"],
+    address: {
+      street: "123 Main St",
+      city: "Springfield",
+      state: "IL",
+    },
+  });
+
+  console.log("Value Node", valueNode);
 }
 
 function getComponent(id: string) {

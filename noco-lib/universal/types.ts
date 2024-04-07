@@ -30,10 +30,10 @@ export interface ExpandedData<
   id: GUID;
 }
 
-export interface BlockData {
-  __noco__type__: string;
-  props: { [key: string]: unknown };
-}
+// export interface BlockData {
+//   __noco__type__: string;
+//   props: { [key: string]: unknown };
+// }
 
 export type ToExpandedData<T> = T extends
   | string

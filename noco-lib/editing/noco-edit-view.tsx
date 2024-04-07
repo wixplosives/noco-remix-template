@@ -8,6 +8,20 @@ import {
 import { usePage } from "./use-page";
 import { useComponentRegistry } from "./component-registry-context";
 
+// class NocoReactRenderer {
+//   constructor(private data: ExpandedDataWithBlock) {}
+//   render(): JSX.Element | null {
+//     return null;
+//   }
+// }
+
+// function intoLazyComponent(promise: Promise<React.ComponentType<unknown>>) {
+//   const LazyComponentLoader = lazy(async () => {
+//     return { default: await promise };
+//   });
+//   return LazyComponentLoader;
+// }
+
 export const useNocoEditView = <U,>(
   toJsx: <P>(
     compType: React.ComponentType<P>,

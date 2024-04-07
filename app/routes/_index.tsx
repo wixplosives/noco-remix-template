@@ -13,6 +13,7 @@ import { ExpandedDataWithBlock, GUID } from "noco-lib/universal/types";
 import { systemErrors } from "noco-lib/editing/noco-error-view";
 import { useNocoEditView } from "noco-lib/editing/noco-edit-view";
 import { useCallback } from "react";
+import "noco-lib/editing/noco-document.dev-example";
 export const meta = () => {
   return [
     { title: "New Remix App" },

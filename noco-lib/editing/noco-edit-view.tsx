@@ -67,7 +67,7 @@ export const useNocoEditView = <U,>(
 
   useEffect(() => {
     window.document.dispatchEvent(new CustomEvent("noco-render"));
-  }, [ver]);
+  }, [ver, page]);
   const deserializedPage = useMemo(() => {
     if (!page) {
       return null;

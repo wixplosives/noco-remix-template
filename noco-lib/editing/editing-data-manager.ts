@@ -78,14 +78,27 @@ export class EditingDataManager {
   }
   private blockNavigation() {
     const allLinks = document.querySelectorAll("a");
-    allLinks.forEach((link) => {
-      link.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        this.gotoPageBySlug(link.getAttribute("href")!);
-      });
-    });
+    allLinks.forEach(this.linkBlocker);
   }
+  private linkBlocker = (link: HTMLAnchorElement) => {
+    if (!link.href) {
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((link as any).nocoLinkBlocked) {
+      return;
+    }
+    const listener = (e: Event) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const href = link.getAttribute("href");
+      if (!href) return;
+      this.gotoPageBySlug(href);
+    };
+    link.addEventListener("click", listener);
+    // link.addEventListener("mousedown", listener);
+    // link.addEventListener("navigation", listener);
+  };
 }
 
 export const editingDataProviderContext =

@@ -21,5 +21,5 @@ export const useComponent = (id: string): React.ComponentType | undefined => {
     }
   }, [id, registry]);
 
-  return useAsync(load);
+  return useAsync(load) || undefined;
 };

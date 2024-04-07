@@ -19,6 +19,7 @@ import {
   editingDataProviderContext,
 } from "./editing-data-manager";
 import React from "react";
+import { usePageList } from "./use-page-list";
 
 // class NocoReactRenderer {
 //   constructor(private data: ExpandedDataWithBlock) {}
@@ -46,9 +47,12 @@ export const useNocoEditView = <U,>(
   if (!dataManager) {
     throw new Error("No data manager found");
   }
-  const [currrentPage, setCurrentPage] = useState<string>("/");
-
-  const page = usePage(currrentPage);
+  const [currrentPage, setCurrentPage] = useState<string | null>(null);
+  const pageList = usePageList();
+  const home = pageList?.value.pages.value.find(
+    (page) => page.value.slug.value === "/"
+  );
+  const page = usePage(currrentPage || home?.value.pageID.value, true);
   const [ver, onComponentLoaded] = useReducer((state) => state + 1, 0);
   const loadingComponents = useRef(new Set<string>());
   const componentRegistry = useComponentRegistry();
@@ -56,7 +60,7 @@ export const useNocoEditView = <U,>(
   useEffect(() => {
     const handlePageChange = (e: Event) => {
       if (e instanceof NocoNavigationEvent) {
-        setCurrentPage(e.slug);
+        setCurrentPage(e.pageId);
       }
     };
     window.document.addEventListener("noco-navigation", handlePageChange);

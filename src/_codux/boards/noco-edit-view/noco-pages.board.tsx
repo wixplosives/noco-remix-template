@@ -81,4 +81,7 @@ export default createBoard({
   },
   isSnippet: true,
   plugins: [BoardPlugin.use()],
+  environmentProps: {
+    canvasHeight: 216,
+  },
 });

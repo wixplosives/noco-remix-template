@@ -14,6 +14,7 @@ export class EditingDataManager {
   private documentList: NocoPageList | null = null;
   private docListPromise: Promise<NocoPageList> | null = null;
   private documents: Map<string, ExpandedDataWithBlock> = new Map();
+  private currentPageId: string | null = null;
   private documentPromises: Map<string, Promise<ExpandedDataWithBlock>> =
     new Map();
 
@@ -41,13 +42,16 @@ export class EditingDataManager {
     return this.documents.get(id) || null;
   }
 
-  getPage(id: string): Promise<ExpandedDataWithBlock> {
+  getPage(id: string, setAsCurrent = false): Promise<ExpandedDataWithBlock> {
     if (!this.documents.has(id)) {
       if (this.documentPromises.has(id)) {
         return this.documentPromises.get(id)!;
       }
       const res = this.fetchPage(id).then((data) => {
         this.documents.set(id, data);
+        if (setAsCurrent) {
+          this.gotoPage(id);
+        }
         return data;
       });
       this.documentPromises.set(id, res);
@@ -65,7 +69,13 @@ export class EditingDataManager {
       this.gotoPage(page.value.pageID.value);
     }
   }
-  public async gotoPage(pageId: string) {
+  public getCurrentPageId() {
+    return this.currentPageId;
+  }
+
+  public gotoPage(pageId: string) {
+    this.currentPageId = pageId;
+
     window.document.dispatchEvent(
       new NocoNavigationEvent("noco-navigation", pageId)
     );
@@ -111,7 +121,7 @@ export class NocoEvent extends Event {
 }
 
 export class NocoNavigationEvent extends Event {
-  constructor(type: string, public slug: string) {
+  constructor(type: string, public pageId: string) {
     super(type);
   }
 }

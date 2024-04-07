@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useReducer } from "react";
+import { useCallback, useMemo, useReducer, useRef } from "react";
 import {
   isExpandedDataWithBlock,
   type ExpandedData,
@@ -32,18 +32,35 @@ export const useNocoEditView = <U,>(
 ) => {
   const page = usePage("a");
   const [ver, onComponentLoaded] = useReducer((state) => state + 1, 0);
+  const loadingComponents = useRef(new Set<string>());
   const componentRegistry = useComponentRegistry();
 
   const deserializedPage = useMemo(() => {
     const deps = new Set(getDeserializeDependencies(page));
     for (const dep of deps) {
-      if (!componentRegistry.getComponentById(dep)) {
+      if (
+        !componentRegistry.getComponentById(dep) &&
+        !loadingComponents.current.has(dep)
+      ) {
+        loadingComponents.current.add(dep);
         componentRegistry.loadComponentById(dep).then(onComponentLoaded);
       }
     }
     return mapToEditView(page, (data, deserialize) => {
       const componentType = data.value.__noco__type__.value;
+      const ComponentDriver = componentRegistry.getDriverById(componentType);
       const Component = componentRegistry.getComponentById(componentType);
+      if (ComponentDriver.componentLoadError) {
+        return toJsx(
+          componentRegistry.getErrorView(),
+          {
+            message:
+              "Component " + ComponentDriver.id + " failed to load" + ver,
+          },
+          data.id,
+          page.value.props === data.value.props
+        );
+      }
       if (Component === null || Component === undefined) {
         return toJsx(
           componentRegistry.getErrorView(),

@@ -44,7 +44,9 @@ export class ComponentRegistry {
       componentDriver.componentPromise = componentDriver.loadComponent();
     }
     try {
-      return await componentDriver.componentPromise;
+      const Comp = await componentDriver.componentPromise;
+      componentDriver.component = Comp;
+      return Comp;
     } catch (e) {
       componentDriver.componentLoadError = e;
       throw e;

@@ -1,0 +1,18 @@
+{
+    "$schema": "../app/noco/page.schema.json",
+    "__noco__type__": "pageTemplates/defaultPageTemplate",
+    "props": {
+        "title": "About Us",
+        "children": [
+            {
+                "__noco__type__": "sections/hero",
+                "props": {
+                    "title": "Hero Section Title",
+                    "subtitle": "Hero Section Subtitle",
+                    "backgroundImage": "https://via.placeholder.com/1920x1080"
+                }
+            }
+        ]
+    }
+    
+}

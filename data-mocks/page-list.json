@@ -3,7 +3,12 @@
     "pages": [
         {
             "name": "Home",
-            "slug": "home",
+            "slug": "/",
             "pageID": "./home.json"
+        },
+        {
+            "name": "About",
+            "slug": "/about",
+            "pageID": "./about.json"
         }]
 }

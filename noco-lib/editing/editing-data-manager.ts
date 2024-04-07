@@ -1,21 +1,26 @@
-import { ExpandedData, ExpandedDataWithBlock } from "noco-lib/universal/types";
+import { ExpandedDataWithBlock, NocoPageList } from "noco-lib/universal/types";
 import React from "react";
 
 export class EditingDataManager {
   constructor(
-    private fetchPageList: () => Promise<ExpandedData>,
+    private fetchPageList: () => Promise<NocoPageList>,
     private fetchPage: (id: string) => Promise<ExpandedDataWithBlock>
-  ) {}
-  private documentList: ExpandedData | null = null;
-  private docListPromise: Promise<ExpandedData> | null = null;
+  ) {
+    if (typeof window !== "undefined") {
+      this.initNavigationBlock();
+      window.document.dispatchEvent(new NocoEvent("on-noco-preview", this));
+    }
+  }
+  private documentList: NocoPageList | null = null;
+  private docListPromise: Promise<NocoPageList> | null = null;
   private documents: Map<string, ExpandedDataWithBlock> = new Map();
   private documentPromises: Map<string, Promise<ExpandedDataWithBlock>> =
     new Map();
 
-  getLoadedPageList(): ExpandedData | null {
+  getLoadedPageList(): NocoPageList | null {
     return this.documentList;
   }
-  getPageList = (): Promise<ExpandedData> => {
+  getPageList = (): Promise<NocoPageList> => {
     if (!this.documentList) {
       if (this.docListPromise) {
         return this.docListPromise;
@@ -27,7 +32,9 @@ export class EditingDataManager {
       this.docListPromise = res;
       return res;
     }
-    return Promise.resolve(this.documentList);
+    return Promise.resolve(this.documentList).then((data) => {
+      return data;
+    });
   };
 
   getLoadedPage(id: string): ExpandedDataWithBlock | null {
@@ -48,7 +55,56 @@ export class EditingDataManager {
     }
     return Promise.resolve(this.documents.get(id)!);
   }
+
+  public async gotoPageBySlug(pageSlug: string) {
+    const pages = await this.getPageList();
+    const page = pages.value.pages.value.find(
+      (p) => p.value.slug.value === pageSlug
+    );
+    if (page) {
+      this.gotoPage(page.value.pageID.value);
+    }
+  }
+  public async gotoPage(pageId: string) {
+    window.document.dispatchEvent(
+      new NocoNavigationEvent("noco-navigation", pageId)
+    );
+  }
+
+  private initNavigationBlock() {
+    window.document.addEventListener("noco-render", () => {
+      this.blockNavigation();
+    });
+  }
+  private blockNavigation() {
+    const allLinks = document.querySelectorAll("a");
+    allLinks.forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.gotoPageBySlug(link.getAttribute("href")!);
+      });
+    });
+  }
 }
 
 export const editingDataProviderContext =
   React.createContext<EditingDataManager | null>(null);
+
+export class NocoEvent extends Event {
+  constructor(type: string, public dataManager: EditingDataManager) {
+    super(type);
+  }
+}
+
+export class NocoNavigationEvent extends Event {
+  constructor(type: string, public slug: string) {
+    super(type);
+  }
+}
+
+export class NocoRenderEvent extends Event {
+  constructor(type: string) {
+    super(type);
+  }
+}

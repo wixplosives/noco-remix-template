@@ -1,4 +1,11 @@
-import { useCallback, useMemo, useReducer, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import {
   isExpandedDataWithBlock,
   type ExpandedData,
@@ -7,6 +14,11 @@ import {
 } from "../universal/types";
 import { usePage } from "./use-page";
 import { useComponentRegistry } from "./component-registry-context";
+import {
+  NocoNavigationEvent,
+  editingDataProviderContext,
+} from "./editing-data-manager";
+import React from "react";
 
 // class NocoReactRenderer {
 //   constructor(private data: ExpandedDataWithBlock) {}
@@ -30,12 +42,36 @@ export const useNocoEditView = <U,>(
     isRoot: boolean
   ) => U
 ) => {
-  const page = usePage("a");
+  const dataManager = React.useContext(editingDataProviderContext);
+  if (!dataManager) {
+    throw new Error("No data manager found");
+  }
+  const [currrentPage, setCurrentPage] = useState<string>("/");
+
+  const page = usePage(currrentPage);
   const [ver, onComponentLoaded] = useReducer((state) => state + 1, 0);
   const loadingComponents = useRef(new Set<string>());
   const componentRegistry = useComponentRegistry();
 
+  useEffect(() => {
+    const handlePageChange = (e: Event) => {
+      if (e instanceof NocoNavigationEvent) {
+        setCurrentPage(e.slug);
+      }
+    };
+    window.document.addEventListener("noco-navigation", handlePageChange);
+    return () => {
+      window.document.removeEventListener("noco-navigation", handlePageChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    window.document.dispatchEvent(new CustomEvent("noco-render"));
+  }, [ver]);
   const deserializedPage = useMemo(() => {
+    if (!page) {
+      return null;
+    }
     const deps = new Set(getDeserializeDependencies(page));
     for (const dep of deps) {
       if (

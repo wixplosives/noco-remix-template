@@ -2,7 +2,7 @@ import React from "react";
 
 export const useAsync = <T>(
   asyncFn: undefined | (() => Promise<T>) | (() => T)
-): T extends Promise<infer U> ? U : T => {
+): (T extends Promise<infer U> ? U : T) | null => {
   const runningKey = React.useRef({});
   const value = React.useRef<T | null>(null);
   const update = React.useReducer((x) => x + 1, 0)[1];

@@ -110,3 +110,12 @@ export interface NocoRemoveItemChange extends NocoBaseChange<"array"> {
     itemId: GUID;
   };
 }
+export type NocoPageList = ExpandedData<{
+  pages: ExpandedData<NocoPage[]>;
+}>;
+
+export type NocoPage = ToExpandedData<{
+  pageID: string;
+  name: string;
+  slug: string;
+}>;

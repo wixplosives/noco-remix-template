@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import {
   isExpandedDataWithBlock,
   type ExpandedData,
@@ -54,7 +47,6 @@ export const useNocoEditView = <U,>(
   );
   const page = usePage(currrentPage || home?.value.pageID.value, true);
   const [ver, onComponentLoaded] = useReducer((state) => state + 1, 0);
-  const loadingComponents = useRef(new Set<string>());
   const componentRegistry = useComponentRegistry();
 
   useEffect(() => {
@@ -78,30 +70,25 @@ export const useNocoEditView = <U,>(
     }
     const deps = new Set(getDeserializeDependencies(page));
     for (const dep of deps) {
-      if (
-        !componentRegistry.getComponentById(dep) &&
-        !loadingComponents.current.has(dep)
-      ) {
-        loadingComponents.current.add(dep);
+      const driver = componentRegistry.getDriverById(dep);
+      if (!driver.component || !driver.componentPromise) {
         componentRegistry.loadComponentById(dep).then(onComponentLoaded);
       }
     }
     return mapToEditView(page, (data, deserialize) => {
       const componentType = data.value.__noco__type__.value;
-      const ComponentDriver = componentRegistry.getDriverById(componentType);
-      const Component = componentRegistry.getComponentById(componentType);
-      if (ComponentDriver.componentLoadError) {
+      const driver = componentRegistry.getDriverById(componentType);
+      if (driver.componentLoadError) {
         return toJsx(
           componentRegistry.getErrorView(),
           {
-            message:
-              "Component " + ComponentDriver.id + " failed to load" + ver,
+            message: "Component " + driver.id + " failed to load" + ver,
           },
           data.id,
           page.value.props === data.value.props
         );
       }
-      if (Component === null || Component === undefined) {
+      if (!driver.component) {
         return toJsx(
           componentRegistry.getErrorView(),
           { message: "Loading" + ver },
@@ -117,7 +104,7 @@ export const useNocoEditView = <U,>(
         {} as Record<string, unknown>
       );
       return toJsx(
-        Component,
+        driver.component,
         props,
         data.id,
         page.value.props === data.value.props

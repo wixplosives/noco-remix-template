@@ -11,6 +11,7 @@ import { useNocoEditView } from "noco-lib/editing/noco-edit-view";
 import { useCallback } from "react";
 import "noco-lib/editing/noco-document.dev-example";
 import { fetchPage, fetchPageList } from "data-mocks/apis";
+import schema from "../noco/page.schema.json";
 import { GUID } from "noco-lib/universal/types";
 export const meta = () => {
   return [
@@ -24,7 +25,12 @@ componentRegistry.registerAll(systemErrors);
 componentRegistry.registerAll(pageTemplates);
 componentRegistry.registerAll(sections);
 
-const dataManager = new EditingDataManager(fetchPageList, fetchPage);
+const dataManager = new EditingDataManager(
+  fetchPageList,
+  fetchPage,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  schema as any
+);
 
 export default function Index() {
   return (

@@ -1,10 +1,12 @@
 import { ExpandedDataWithBlock, NocoPageList } from "noco-lib/universal/types";
 import React from "react";
+import type { JSONSchema4 } from "@typescript-eslint/utils/json-schema";
 
 export class EditingDataManager {
   constructor(
     private fetchPageList: () => Promise<NocoPageList>,
-    private fetchPage: (id: string) => Promise<ExpandedDataWithBlock>
+    private fetchPage: (id: string) => Promise<ExpandedDataWithBlock>,
+    private pageSchema: JSONSchema4
   ) {
     if (typeof window !== "undefined") {
       this.initNavigationBlock();
@@ -58,6 +60,9 @@ export class EditingDataManager {
       return res;
     }
     return Promise.resolve(this.documents.get(id)!);
+  }
+  public getSchema() {
+    return this.pageSchema;
   }
 
   public async gotoPageBySlug(pageSlug: string) {

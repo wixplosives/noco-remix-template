@@ -2,12 +2,12 @@ import { ComponentDriver } from "noco-lib/editing/component-registry";
 
 export const sections: ComponentDriver[] = [
   {
-    id: "sections/hero",
+    id: "hero",
     type: "section",
     loadComponent: async () => (await import("./hero")).Hero,
   },
   {
-    id: "sections/gallery",
+    id: "gallery",
     type: "section",
     loadComponent: async () => (await import("./gallery")).Gallery,
   },

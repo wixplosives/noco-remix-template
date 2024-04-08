@@ -12,7 +12,7 @@ import { componentRegistryContext } from "noco-lib/editing/component-registry-co
 import React, { useCallback } from "react";
 import { systemErrors } from "noco-lib/editing/noco-error-view";
 import { fetchPage, fetchPageList } from "data-mocks/apis";
-
+import schema from "../../../../app/noco/page.schema.json";
 const componentRegistry = new ComponentRegistry();
 componentRegistry.registerAll(systemErrors);
 componentRegistry.registerAll(pageTemplates);
@@ -47,7 +47,12 @@ const BoardPlugin = {
   },
 };
 
-const dataManager = new EditingDataManager(fetchPageList, fetchPage);
+const dataManager = new EditingDataManager(
+  fetchPageList,
+  fetchPage,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  schema as any
+);
 
 const createElementByOtherName = React.createElement.bind(React);
 export default createBoard({
@@ -83,5 +88,6 @@ export default createBoard({
   plugins: [BoardPlugin.use()],
   environmentProps: {
     canvasHeight: 216,
+    canvasWidth: 248,
   },
 });

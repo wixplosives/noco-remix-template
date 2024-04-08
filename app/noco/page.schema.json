@@ -1,13 +1,13 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
     "title": "Dynamic page data",
-    "definitions": {
+    "blocks": {
         "defaultPageTemplate":{
             "type": "object",
             "properties": {
                 "__noco__type__": {
                     "type": "string",
-                    "enum": ["pageTemplates/defaultPageTemplate"]
+                    "enum": ["defaultPageTemplate"]
                 },
                 "props":{
                     "type": "object",
@@ -26,17 +26,12 @@
             },
             "required": ["__noco__type__", "props"]
         },
-        "defaultPageTemplates":{
-            "oneOf": [{
-                "$ref": "#/definitions/defaultPageTemplate"
-            }]
-        },
-        "heroSection": {
+        "hero": {
             "type": "object",
             "properties": {
                 "__noco__type__": {
                     "type": "string",
-                    "enum": ["sections/hero"]
+                    "enum": ["hero"]
                 },
                 "props":{
                     "type": "object",
@@ -57,12 +52,12 @@
             },
             "required": ["__noco__type__", "props"]
         },
-        "gallerySection": {
+        "gallery": {
             "type": "object",
             "properties": {
                 "__noco__type__": {
                     "type": "string",
-                    "enum": ["sections/gallery"]
+                    "enum": ["gallery"]
                 },
                 "props":{
                     "type": "object",
@@ -81,16 +76,20 @@
                 }
             },
             "required": ["__noco__type__", "props"]
-        },
+        }
+        
+    },
+    "definitions": {
+
         "pageSections": {
             "oneOf": [{
-                "$ref": "#/definitions/heroSection"
+                "$ref": "#/blocks/hero"
             }, {
-                "$ref": "#/definitions/gallerySection"
+                "$ref": "#/blocks/gallery"
             }]
         }
     },
     "oneOf": [{
-        "$ref": "#/definitions/defaultPageTemplate"
+        "$ref": "#/blocks/defaultPageTemplate"
     }]
 }

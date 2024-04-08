@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useState,
+} from "react";
 import {
   isExpandedDataWithBlock,
   type ExpandedData,
@@ -11,7 +17,6 @@ import {
   NocoNavigationEvent,
   editingDataProviderContext,
 } from "./editing-data-manager";
-import React from "react";
 import { usePageList } from "./use-page-list";
 
 // class NocoReactRenderer {
@@ -55,6 +60,7 @@ export const useNocoEditView = <U,>(
         setCurrentPage(e.pageId);
       }
     };
+
     window.document.addEventListener("noco-navigation", handlePageChange);
     return () => {
       window.document.removeEventListener("noco-navigation", handlePageChange);

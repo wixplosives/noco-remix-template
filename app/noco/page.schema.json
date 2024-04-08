@@ -24,6 +24,13 @@
                     }
                 }
             },
+            "defaultValue": {
+                "__noco__type__": "defaultPageTemplate",
+                "props": {
+                    "title": "Default title",
+                    "children": []
+                }
+            },
             "required": ["__noco__type__", "props"]
         },
         "hero": {
@@ -50,6 +57,14 @@
                 }
                
             },
+            "defaultValue": {
+                "__noco__type__": "hero",
+                "props": {
+                    "title": "Default title",
+                    "subtitle": "Default subtitle",
+                    "backgroundImage": "https://via.placeholder.com/1920x1080"
+                }
+            },
             "required": ["__noco__type__", "props"]
         },
         "gallery": {
@@ -73,6 +88,13 @@
                             }
                         }
                     }
+                }
+            },
+            "defaultValue": {
+                "__noco__type__": "gallery",
+                "props": {
+                    "title": "Default title",
+                    "images": ["https://via.placeholder.com/1920x1080"]
                 }
             },
             "required": ["__noco__type__", "props"]

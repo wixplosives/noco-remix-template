@@ -44,6 +44,11 @@ export class EditingDataManager {
     return this.documents.get(id) || null;
   }
 
+  setPageData(id: string, data: ExpandedDataWithBlock) {
+    this.documents.set(id, data);
+    window.document.dispatchEvent(new Event("noco-update"));
+  }
+
   getPage(id: string, setAsCurrent = false): Promise<ExpandedDataWithBlock> {
     if (!this.documents.has(id)) {
       if (this.documentPromises.has(id)) {

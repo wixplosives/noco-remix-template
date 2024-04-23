@@ -1,18 +1,15 @@
-import { ComponentRegistry } from "noco-lib/editing/component-registry";
 import { componentRegistryContext } from "noco-lib/editing/component-registry-context";
-import { pageTemplates } from "~/noco/page-templates";
-import { sections } from "~/noco/sections";
 import {
-  EditingDataManager,
+  NocoEditingPages,
   editingDataProviderContext,
 } from "noco-lib/editing/editing-data-manager";
-import { systemErrors } from "noco-lib/editing/noco-error-view";
 import { useNocoEditView } from "noco-lib/editing/noco-edit-view";
-import { useCallback } from "react";
+import React, { useCallback } from "react";
 import "noco-lib/editing/noco-document.dev-example";
 import { fetchPage, fetchPageList } from "data-mocks/apis";
 import schema from "../noco/page.schema.json";
 import { GUID } from "noco-lib/universal/types";
+import { registry } from "~/noco/registry";
 export const meta = () => {
   return [
     { title: "New Remix App" },
@@ -20,12 +17,7 @@ export const meta = () => {
   ];
 };
 
-const componentRegistry = new ComponentRegistry();
-componentRegistry.registerAll(systemErrors);
-componentRegistry.registerAll(pageTemplates);
-componentRegistry.registerAll(sections);
-
-const dataManager = new EditingDataManager(
+const dataManager = new NocoEditingPages(
   fetchPageList,
   fetchPage,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,7 +27,7 @@ const dataManager = new EditingDataManager(
 export default function Index() {
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
-      <componentRegistryContext.Provider value={componentRegistry}>
+      <componentRegistryContext.Provider value={registry}>
         <editingDataProviderContext.Provider value={dataManager}>
           <InternalIndex />
         </editingDataProviderContext.Provider>

@@ -47,13 +47,20 @@ const BoardPlugin = {
   },
 };
 
-const dataManager = new EditingDataManager(
-  fetchPageList,
-  fetchPage,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  schema as any
-);
+type windowWithEditingDataManager = typeof window & {
+  _editingDataManager: EditingDataManager;
+};
+const dataManager =
+  (window as windowWithEditingDataManager)._editingDataManager ||
+  new EditingDataManager(
+    fetchPageList,
+    fetchPage,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    schema as any
+  );
 
+(window as windowWithEditingDataManager)._editingDataManager = dataManager;
+dataManager.onReload();
 const createElementByOtherName = React.createElement.bind(React);
 export default createBoard({
   name: "NocoPages",
@@ -69,14 +76,14 @@ export default createBoard({
         return <Page {...props} key={key} />;
       }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      //   const res = createElementByOtherName(CompType as any, { ...props, key });
+      const res = createElementByOtherName(Page as any, { ...props, key });
       // const Comp = Page;
       // const res = <Comp {...props} key={key} />;
       // return res;
-      const res = {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ...createElementByOtherName(Page as any, { ...props, key }),
-      };
+      // const res = {
+      //   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      //   ...createElementByOtherName(Page as any, { ...props, key }),
+      // };
 
       return res;
     },
@@ -88,6 +95,7 @@ export default createBoard({
   plugins: [BoardPlugin.use()],
   environmentProps: {
     canvasHeight: 216,
-    canvasWidth: 248,
+    canvasWidth: 344,
+    windowWidth: 1152,
   },
 });

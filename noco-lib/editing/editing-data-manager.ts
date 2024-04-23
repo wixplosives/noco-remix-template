@@ -20,6 +20,9 @@ export class EditingDataManager {
   private documentPromises: Map<string, Promise<ExpandedDataWithBlock>> =
     new Map();
 
+  public onReload() {
+    window.document.dispatchEvent(new NocoEvent("on-noco-preview", this));
+  }
   getLoadedPageList(): NocoPageList | null {
     return this.documentList;
   }

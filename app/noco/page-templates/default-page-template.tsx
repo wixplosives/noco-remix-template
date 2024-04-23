@@ -1,4 +1,5 @@
 import React from "react";
+import "./default-page-template.css";
 
 export interface DefaultPageTemplateProps {
   title: string;
@@ -9,10 +10,12 @@ export interface DefaultPageTemplateProps {
 export const DefaultPageTemplate = (props: DefaultPageTemplateProps) => {
   return (
     <div>
-      <menu>
-        <a href="/">Home</a>
-        <a href="/about">About</a>
-      </menu>
+      <div className="DefaultPageTemplate_grid">
+        <menu>
+          <a href="/">Home</a>
+          <a href="/about">About</a>
+        </menu>
+      </div>
       <h1>{props.title}!!!</h1>
       {props.children}
     </div>

@@ -25,6 +25,9 @@ export class ComponentRegistry {
       this.register(componentDriver)
     );
   }
+  hasDriver(id: string) {
+    return this.byId.has(id);
+  }
   getDriverById(id: string) {
     const componentDriver = this.byId.get(id);
     if (!componentDriver) {
@@ -35,7 +38,8 @@ export class ComponentRegistry {
   getComponentById(id: string) {
     return this.byId.get(id)?.component;
   }
-  async loadComponentById(id: string) {
+  // this function should always returns the same promise
+  loadComponentById(id: string) {
     const componentDriver = this.getDriverById(id);
     if (componentDriver.component) {
       return componentDriver.component;
@@ -43,14 +47,14 @@ export class ComponentRegistry {
     if (!componentDriver.componentPromise) {
       componentDriver.componentPromise = componentDriver.loadComponent();
     }
-    try {
-      const Comp = await componentDriver.componentPromise;
-      componentDriver.component = Comp;
-      return Comp;
-    } catch (e) {
-      componentDriver.componentLoadError = e;
-      throw e;
-    }
+    componentDriver.componentPromise
+      .then((Comp) => {
+        componentDriver.component = Comp;
+      })
+      .catch((e) => {
+        componentDriver.componentLoadError = e;
+      });
+    return componentDriver.componentPromise;
   }
   getErrorView() {
     const comp = this.getDriverById("NocoErrorView")?.component;

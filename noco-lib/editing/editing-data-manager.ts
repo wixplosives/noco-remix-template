@@ -2,7 +2,7 @@ import { ExpandedDataWithBlock, NocoPageList } from "noco-lib/universal/types";
 import React from "react";
 import type { JSONSchema4 } from "@typescript-eslint/utils/json-schema";
 
-export class EditingDataManager {
+export class NocoEditingPages {
   constructor(
     private fetchPageList: () => Promise<NocoPageList>,
     private fetchPage: (id: string) => Promise<ExpandedDataWithBlock>,
@@ -13,7 +13,7 @@ export class EditingDataManager {
       window.document.dispatchEvent(new NocoEvent("on-noco-preview", this));
     }
   }
-  private documentList: NocoPageList | null = null;
+  private pageList: NocoPageList | null = null;
   private docListPromise: Promise<NocoPageList> | null = null;
   private documents: Map<string, ExpandedDataWithBlock> = new Map();
   private currentPageId: string | null = null;
@@ -21,23 +21,12 @@ export class EditingDataManager {
     new Map();
 
   getLoadedPageList(): NocoPageList | null {
-    return this.documentList;
+    return this.pageList;
   }
-  getPageList = (): Promise<NocoPageList> => {
-    if (!this.documentList) {
-      if (this.docListPromise) {
-        return this.docListPromise;
-      }
-      const res = this.fetchPageList().then((data) => {
-        this.documentList = data;
-        return data;
-      });
-      this.docListPromise = res;
-      return res;
-    }
-    return Promise.resolve(this.documentList).then((data) => {
-      return data;
-    });
+  getPageList = async (): Promise<NocoPageList> => {
+    return this.pageList
+      ? this.pageList
+      : (this.docListPromise ??= this.fetchPageList());
   };
 
   getLoadedPage(id: string): ExpandedDataWithBlock | null {
@@ -122,10 +111,18 @@ export class EditingDataManager {
 }
 
 export const editingDataProviderContext =
-  React.createContext<EditingDataManager | null>(null);
+  React.createContext<NocoEditingPages | null>(null);
+
+export const useEditingDataManager = () => {
+  const dataManager = React.useContext(editingDataProviderContext);
+  if (!dataManager) {
+    throw new Error("No data manager found");
+  }
+  return dataManager;
+};
 
 export class NocoEvent extends Event {
-  constructor(type: string, public dataManager: EditingDataManager) {
+  constructor(type: string, public dataManager: NocoEditingPages) {
     super(type);
   }
 }

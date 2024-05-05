@@ -78,7 +78,7 @@ export interface NocoBaseChange<T extends DataChangeCategory> {
 export interface NocoSetChange extends NocoBaseChange<DataChangeCategory> {
   kind: "set";
   params: {
-    newValue: ExpandedData;
+    newValue: unknown;
   };
 }
 
@@ -110,6 +110,13 @@ export interface NocoRemoveItemChange extends NocoBaseChange<"array"> {
     itemId: GUID;
   };
 }
+
+export type NocoChange =
+  | NocoSetChange
+  | NodeSetPropertyChange
+  | NocoRemovePropertyChange
+  | NocoAddItemChange
+  | NocoRemoveItemChange;
 export type NocoPageList = ExpandedData<{
   pages: ExpandedData<NocoPage[]>;
 }>;

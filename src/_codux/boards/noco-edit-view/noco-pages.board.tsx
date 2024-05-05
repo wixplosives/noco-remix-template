@@ -13,6 +13,7 @@ import React, { useCallback } from "react";
 import { systemErrors } from "noco-lib/editing/noco-error-view";
 import { fetchPage, fetchPageList } from "data-mocks/apis";
 import schema from "../../../../app/noco/page.schema.json";
+
 const componentRegistry = new ComponentRegistry();
 componentRegistry.registerAll(systemErrors);
 componentRegistry.registerAll(pageTemplates);

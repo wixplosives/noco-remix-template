@@ -20,12 +20,43 @@ export const getEnumOptions = (schema?: CoreSchemaMetaSchema): unknown[] => {
   }
   return [];
 };
+export const hasOnlyEnumOptions = (
+  schema?: CoreSchemaMetaSchema
+): boolean | "single" => {
+  if (!schema) {
+    return false;
+  }
+  if (schema.const) {
+    return "single";
+  }
+  if (schema.enum && schema.enum.length > 0) {
+    return schema.enum.length === 1 ? "single" : true;
+  }
+  if (schema.oneOf) {
+    let hasEnum = false;
+    let hasSingle = false;
+    for (const subSchema of schema.oneOf) {
+      const result = hasOnlyEnumOptions(subSchema);
+      if (result === "single") {
+        if (hasSingle) {
+          hasEnum = true;
+        }
+        hasSingle = true;
+      } else if (result) {
+        hasEnum = true;
+      } else {
+        return false;
+      }
+    }
+  }
+  return false;
+};
 export const enumInputVisualizerFactory: ComponentRepoRecordFactory<
   JSX.IntrinsicElements["select"],
   EnumInputVisualizerProps
 > = (Skin) => ({
   name: "enum-input",
-  predicate: (props) => getEnumOptions(props?.schema).length > 0,
+  predicate: (props) => hasOnlyEnumOptions(props?.schema) === true,
   component: ({ data, onChange, dataId, schemaPointer, schema }) => {
     const options = getEnumOptions(schema);
     const idx = options.findIndex((o) => o === data?.value);

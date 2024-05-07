@@ -16,10 +16,21 @@ export interface ComponentsRepoStorage<P> {
 
 export type Predicate = (props: AutoViewProps) => boolean;
 
-export type WrapperFunction = (
-  item: JSX.Element,
-  props: AutoViewProps
-) => JSX.Element;
+export type AutoViewWrapper = React.ComponentType<
+  AutoViewProps & { children: React.ReactNode }
+>;
+
+export type AutoViewUnionSelector = React.ComponentType<
+  AutoViewProps & {
+    children: React.ReactNode;
+    select: (pointer: string) => void;
+    schemas: Array<{
+      schema: CoreSchemaMetaSchema;
+      pointer: string;
+    }>;
+    selected: string;
+  }
+>;
 
 export type GetNode = (node: CoreSchemaMetaSchema) => string;
 
@@ -47,9 +58,12 @@ export class ComponentsRepo {
 
   private wrappers: Array<{
     predicate?: Predicate;
-    fn: WrapperFunction;
+    fn: AutoViewWrapper;
   }> = [];
-
+  private oneOfSelectors: Array<{
+    predicate?: Predicate;
+    fn: AutoViewWrapper;
+  }> = [];
   constructor(
     public name: string,
     public getNodeType: GetNode = (node) => node.type as string
@@ -107,7 +121,7 @@ export class ComponentsRepo {
     return this.byPredicate.filter(({ predicate }) => predicate(props));
   }
 
-  public addWrapper(fn: WrapperFunction, predicate?: Predicate) {
+  public addWrapper(fn: AutoViewWrapper, predicate?: Predicate) {
     this.wrappers.push({ predicate, fn });
 
     return this;

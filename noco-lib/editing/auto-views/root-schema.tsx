@@ -1,6 +1,8 @@
 import React, { useMemo } from "react";
 import { CoreSchemaMetaSchema } from "./JSONSchema";
 import { EventEmitter } from "@wixc3/patterns";
+import { R } from "node_modules/vite/dist/node/types.d-aGj9QkWt";
+import { usePromise } from "../use-promise";
 
 export interface SchemaEvents {
   update: {
@@ -147,52 +149,136 @@ export function getFromPojo<T, U>(
   return null;
 }
 
-export const useRefSchema = (inputSchema: CoreSchemaMetaSchema) => {
+export const useRefSchema = (
+  schemaPointer: string,
+  inputSchema: CoreSchemaMetaSchema
+): RecursiveResolverResult | null => {
   const { schemaClient, schemaId } = React.useContext(schemaContext);
-  const [schema, setSchema] = React.useState<CoreSchemaMetaSchema | undefined>(
-    undefined
-  );
-  const refInfo = useMemo(
-    () =>
-      inputSchema.$ref !== undefined
-        ? getidAndInnerPath(inputSchema.$ref)
-        : undefined,
-    [inputSchema.$ref]
-  );
 
-  React.useEffect(() => {
-    if (!schemaClient || !refInfo) {
-      return;
+  const schemaOrPromise = useMemo(() => {
+    if (!schemaClient) {
+      return null;
     }
+    return recursiveResolver(
+      schemaId || "",
+      schemaPointer,
+      inputSchema,
+      schemaClient
+    );
+  }, [inputSchema, schemaClient]);
+  const loadedValue = usePromise(schemaOrPromise);
+
+  if (loadedValue) {
+    return loadedValue;
+  }
+  return null;
+};
+
+interface RecursiveResolverResult {
+  schemas: Array<{
+    schema: CoreSchemaMetaSchema;
+    schemaPointer: string;
+    isExternal: boolean;
+  }>;
+}
+
+const recursiveResolver = (
+  rootSchemaId: string,
+  schemaPointer: string,
+  schema: CoreSchemaMetaSchema,
+  schemaClient: SchemaClient
+): RecursiveResolverResult | Promise<RecursiveResolverResult> => {
+  const refInfo = schema.$ref ? getidAndInnerPath(schema.$ref) : undefined;
+  if (refInfo) {
     const ref =
       refInfo.id === ""
-        ? schemaId + "#" + refInfo.innerPath
+        ? rootSchemaId + "#" + refInfo.innerPath
         : refInfo.id + "#" + refInfo.innerPath;
     const preloaded = schemaClient.getSchema(ref);
     if (preloaded) {
-      setSchema(preloaded);
-      return;
+      return resolveOneOf(rootSchemaId, ref, preloaded, schemaClient);
     }
-    schemaClient.loadSchemaFromRef(ref).then((schema) => {
-      setSchema(schema);
-    });
-  }, [inputSchema.$ref, schemaClient]);
-  const isExternal = refInfo?.id && refInfo.id !== schemaId;
-  return inputSchema.$ref
-    ? {
-        schema,
-        ref: inputSchema.$ref,
-        isExternal,
-        schemaId: refInfo?.id,
-        rootSchema: refInfo?.id
-          ? schemaClient?.getSchema(refInfo?.id)
-          : undefined,
+    return schemaClient.loadSchemaFromRef(ref).then((refSchema) => {
+      if (refSchema) {
+        return resolveOneOf(rootSchemaId, ref, refSchema, schemaClient);
       }
-    : {
-        schema: inputSchema,
-        ref: undefined,
-        isExternal,
-        schemaId,
-        rootSchema: undefined,
+      return {
+        schemas: [],
       };
+    });
+  }
+  return resolveOneOf(rootSchemaId, schemaPointer, schema, schemaClient);
+};
+const resolveOneOf = (
+  rootSchemaId: string,
+  schemaPointer: string,
+  schema: CoreSchemaMetaSchema,
+  schemaClient: SchemaClient
+): RecursiveResolverResult | Promise<RecursiveResolverResult> => {
+  if (schema.oneOf) {
+    return Promise.all(
+      schema.oneOf.map((oneOfSchema, idx) =>
+        recursiveResolver(
+          rootSchemaId,
+          `${schemaPointer}/oneOf/${idx}`,
+          oneOfSchema,
+          schemaClient
+        )
+      )
+    ).then((resolvedResults) => {
+      const res: RecursiveResolverResult = {
+        schemas: [],
+      };
+      let simplifiedEnum: CoreSchemaMetaSchema | undefined;
+      for (const result of resolvedResults) {
+        for (const resolvedSchema of result.schemas) {
+          if (resolvedSchema.schema.enum) {
+            if (simplifiedEnum?.enum) {
+              simplifiedEnum.enum = [
+                ...simplifiedEnum.enum,
+                ...resolvedSchema.schema.enum,
+              ];
+            } else {
+              simplifiedEnum = { ...resolvedSchema.schema };
+            }
+          } else if (resolvedSchema.schema.const) {
+            if (simplifiedEnum?.enum) {
+              simplifiedEnum.enum = [
+                ...simplifiedEnum.enum,
+                resolvedSchema.schema.const,
+              ];
+            } else {
+              simplifiedEnum = {
+                enum: [resolvedSchema.schema.const],
+              };
+            }
+          } else {
+            res.schemas.push(resolvedSchema);
+          }
+        }
+      }
+      if (simplifiedEnum) {
+        res.schemas.push({
+          schema: simplifiedEnum,
+          schemaPointer,
+          isExternal: false,
+        });
+      }
+
+      return res;
+    });
+  }
+  const refInfo = getidAndInnerPath(schemaPointer);
+
+  const isExternal = !!refInfo.id && refInfo.id !== rootSchemaId;
+
+  return {
+    schemas: [
+      {
+        schema,
+        schemaPointer,
+        isExternal,
+      },
+    ],
+  };
 };

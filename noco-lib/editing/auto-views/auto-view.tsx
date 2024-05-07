@@ -5,7 +5,12 @@ import { formatValidationError } from "./utils/format-validation-error";
 import { ComponentsRepo } from "./components-repo";
 import { AutoEvent, AutoViewProps, SimpleTypes } from "./types";
 import { useRepositoryContext } from "./repository";
-import { RootSchemaProvider, schemaContext, useRefSchema } from "./root-schema";
+import {
+  RootSchemaProvider,
+  schemaContext,
+  splitRef,
+  useRefSchema,
+} from "./root-schema";
 import { expandDataWithNewIds } from "noco-lib/universal/expander";
 
 export type AutoEventHandler<TEvent extends AutoEvent = AutoEvent> = (
@@ -36,17 +41,12 @@ const validate = (
   }
 };
 
-const AutoViewLogic = (props: AutoViewLogicProps) => {
-  const {
-    schema,
-    validation,
-    data,
-    validator,
-    onError,
-    schemaPointer,
-    components,
-  } = props;
-
+export const AutoView = (props: AutoViewProps) => {
+  const { schema, validation, data, onError, schemaPointer } = props;
+  const { components, validator } = useRepositoryContext();
+  const schemaRes = useRefSchema(schemaPointer, schema);
+  const { schemaClient, schemaId } = React.useContext(schemaContext);
+  let resolvedSchema = schemaRes?.schemas[0];
   // useMemo(() => {
   //   validate({
   //     schema,
@@ -57,93 +57,53 @@ const AutoViewLogic = (props: AutoViewLogicProps) => {
   //   });
   // }, [data, onError, schema, validation, validator, schema]);
 
-  if (Array.isArray(schema.type)) {
-    const { type: types, ...rest } = schema;
-
-    let resolvedType: SimpleTypes | undefined = undefined;
-
-    for (const type of types!) {
-      const subSchema = { type, ...rest };
+  if (schemaRes?.schemas.length || 0 > 1) {
+    for (const subSchema of schemaRes?.schemas!) {
       const validate = validator.compile(subSchema);
 
       if (validate(data)) {
-        resolvedType = type as SimpleTypes;
+        resolvedSchema = subSchema;
         break;
       }
     }
-
-    if (!resolvedType) {
-      throw new Error(`
-                cannot resolve any type from "${JSON.stringify(
-                  types
-                )}" for "${schemaPointer}"
-            `);
-    }
-
-    return (
-      <AutoViewLogic
-        {...props}
-        schema={{ type: resolvedType, ...rest }}
-        validation={false}
-      />
-    );
+  }
+  if (!resolvedSchema) {
+    return null;
   }
 
-  const matches = components.getMatched(props);
+  const childProps = {
+    ...props,
+    schema: resolvedSchema.schema,
+    schemaPointer: resolvedSchema.schemaPointer,
+  };
+  const matches = components.getMatched(childProps);
 
   if (matches.length > 0) {
     const componentRecord = matches.slice().pop();
     const Component = componentRecord!.component;
-    const childProps = {
-      ...props,
-      schema,
-    };
-    const wrappers = components.getWrappers(childProps);
 
+    const wrappers = components.getWrappers(childProps);
+    if (resolvedSchema.isExternal) {
+      const externalSchemaId = splitRef(resolvedSchema.schemaPointer).id;
+      return (
+        <RootSchemaProvider
+          schema={schemaClient?.getRootSchema(externalSchemaId) || {}}
+          schemaId={externalSchemaId}
+          schemaClient={schemaClient}
+        >
+          {wrappers.reduce(
+            (item, Comp) => (
+              <Comp {...childProps}>{item}</Comp>
+            ),
+            <Component {...childProps} />
+          )}
+        </RootSchemaProvider>
+      );
+    }
     return wrappers.reduce(
-      (item, fn) => fn(item, childProps),
+      (item, Comp) => <Comp {...childProps}>{item}</Comp>,
       <Component {...childProps} />
     );
   }
   throw Error(`cannot resolve component for "${schemaPointer}"`);
-};
-
-export const AutoView: React.FunctionComponent<AutoViewProps> = (props) => {
-  const { components, validator } = useRepositoryContext();
-  const { schema, isExternal, schemaId, rootSchema, ref } = useRefSchema(
-    props.schema
-  );
-  const { schemaClient } = React.useContext(schemaContext);
-  if (!schema) {
-    return null;
-  }
-  if (isExternal) {
-    if (!rootSchema) {
-      return null;
-    }
-    return (
-      <RootSchemaProvider
-        schema={rootSchema}
-        schemaId={schemaId}
-        schemaClient={schemaClient}
-      >
-        <AutoViewLogic
-          {...props}
-          schema={schema}
-          components={components}
-          validator={validator}
-          schemaPointer={ref}
-        />
-      </RootSchemaProvider>
-    );
-  }
-  return (
-    <AutoViewLogic
-      {...props}
-      components={components}
-      validator={validator}
-      schema={schema}
-      schemaPointer={ref || props.schemaPointer}
-    />
-  );
 };

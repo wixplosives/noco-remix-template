@@ -38,15 +38,16 @@ const baseRepo = new ComponentsRepo("BaseRepo")
   .register(booleanInputVisualizer)
   .register(enumInputVisualizer);
 const repo = baseRepo.clone("LayoutRepo").addWrapper(
-  (item, props) => (
+  (props) => (
     <div className="field">
-      {props.field}:{item}
+      {props.field}:{props.children}
     </div>
   ),
   (node) => node?.schema.type !== "object"
 );
 repo.addWrapper(
-  (item, props) => {
+  (props) => {
+    const item = props.children;
     if (props.schema.title || props.field) {
       return (
         <div className="object">
@@ -89,6 +90,14 @@ const schema: CoreSchemaMetaSchema = {
         },
       },
     },
+    loggedInStatus: {
+      type: "string",
+      enum: ["logged in", "logged out"],
+    },
+    anonymousStatus: {
+      type: "string",
+      enum: ["anonymous"],
+    },
   },
   properties: {
     login: {
@@ -105,6 +114,16 @@ const schema: CoreSchemaMetaSchema = {
     },
     userInfo: {
       $ref: "schema2#/definitions/userInfo",
+    },
+    status: {
+      oneOf: [
+        {
+          $ref: "#/definitions/loggedInStatus",
+        },
+        {
+          $ref: "#/definitions/anonymousStatus",
+        },
+      ],
     },
   },
 };
@@ -167,7 +186,7 @@ export default createBoard({
     );
   },
   environmentProps: {
-    canvasWidth: 408,
+    canvasWidth: 586,
     canvasHeight: 157,
   },
 });

@@ -47,15 +47,16 @@ const AutoViewLogic = (props: AutoViewLogicProps) => {
     components,
   } = props;
 
-  useMemo(() => {
-    validate({
-      schema,
-      validation: validation,
-      data: data,
-      validator: validator,
-      onError: onError,
-    });
-  }, [data, onError, schema, validation, validator, schema]);
+  // useMemo(() => {
+  //   validate({
+  //     schema,
+  //     validation: validation,
+  //     data: data,
+  //     validator: validator,
+  //     onError: onError,
+  //   });
+  // }, [data, onError, schema, validation, validator, schema]);
+
   if (Array.isArray(schema.type)) {
     const { type: types, ...rest } = schema;
 
@@ -88,13 +89,7 @@ const AutoViewLogic = (props: AutoViewLogicProps) => {
     );
   }
 
-  const matches = components.getMatched(schema, props as any);
-  const dataOrDefault = useMemo(() => {
-    if (data === undefined || (data === null && schema.default !== undefined)) {
-      return expandDataWithNewIds(schema.default as any);
-    }
-    return data;
-  }, [data, schema]);
+  const matches = components.getMatched(props);
 
   if (matches.length > 0) {
     const componentRecord = matches.slice().pop();
@@ -102,7 +97,6 @@ const AutoViewLogic = (props: AutoViewLogicProps) => {
     const childProps = {
       ...props,
       schema,
-      data: dataOrDefault,
     };
     const wrappers = components.getWrappers(childProps);
 

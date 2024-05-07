@@ -5,6 +5,8 @@ export type GUID<T extends DataChangeCategory = DataChangeCategory> = string & {
   __kind: T;
 };
 
+export const newTempGuid = "newTempGuid" as GUID<any>;
+
 export const generateGUID = <T extends DataChangeCategory>(
   _forKind: T
 ): GUID<T> => {
@@ -78,7 +80,7 @@ export interface NocoBaseChange<T extends DataChangeCategory> {
 export interface NocoSetChange extends NocoBaseChange<DataChangeCategory> {
   kind: "set";
   params: {
-    newValue: unknown;
+    newValue: string | number | boolean | null | undefined;
   };
 }
 

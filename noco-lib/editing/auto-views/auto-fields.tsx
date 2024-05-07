@@ -3,10 +3,19 @@ import React from "react";
 import { allFields, filterAndOrderFields } from "./utils";
 
 import { AutoView } from "./auto-view";
-import { ExpandedData } from "noco-lib/universal/types";
+import {
+  ExpandedData,
+  GUID,
+  NocoChange,
+  generateGUID,
+  newTempGuid,
+} from "noco-lib/universal/types";
 import { CoreSchemaMetaSchema } from "./JSONSchema";
 import { buildJsonPointer } from "./utils/build-json-pointer";
-import { AutoViewProps } from "./types";
+import { AutoViewChange, AutoViewProps } from "./types";
+import { expandDataWithNewIds } from "noco-lib/universal/expander";
+import { NocoReducer } from "../reducer";
+import { c } from "node_modules/vite/dist/node/types.d-aGj9QkWt";
 
 export interface AutoFieldsProps
   extends AutoViewProps<ExpandedData<Record<string, ExpandedData>>> {
@@ -21,7 +30,7 @@ export function autoFieldsProps(
   autoViewProps: AutoViewProps<ExpandedData<Record<string, ExpandedData>>>
 ): Array<AutoViewProps & { field: string }> {
   const {
-    data = {},
+    data,
     schema: { properties = {}, additionalProperties },
     pick,
   } = autoViewProps;
@@ -29,7 +38,9 @@ export function autoFieldsProps(
   const fields = filterAndOrderFields(
     allFields(
       { type: "object", properties, additionalProperties },
-      additionalProperties ? data : {}
+      additionalProperties
+        ? data?.value || ({} as Record<string, ExpandedData>)
+        : ({} as Record<string, ExpandedData>)
     ), // if schema has additionalProperties, take fields from `data`
     pick
   );
@@ -54,19 +65,68 @@ export function getAutoFieldProps(
     onRenderError,
     onCustomEvent,
     depth,
-    field,
   }: AutoViewProps<ExpandedData<Record<string, ExpandedData>>>
 ): AutoViewProps {
+  const fieldData = data?.value?.[fieldName];
+  let onFieldChange = onChange;
+  if (!fieldData) {
+    onFieldChange = (e, { patch }) => {
+      const newObj = data || expandDataWithNewIds({});
+      const dataId = newObj.id as GUID<"object">;
+      const updatedChanges = patch.map<AutoViewChange>((change) => {
+        if (change.kind === "set-new") {
+          return {
+            kind: "setProperty",
+            target: dataId,
+            params: {
+              propertyName: fieldName,
+              newValue: change.params.newValue,
+            },
+          };
+        }
+        if (change.kind === "set" && change.target === newTempGuid) {
+          return {
+            kind: "setProperty",
+            target: dataId,
+            params: {
+              propertyName: fieldName,
+              newValue: expandDataWithNewIds(change.params.newValue),
+            },
+          };
+        }
+        return {
+          ...change,
+          target:
+            change.target === newTempGuid ? (dataId as any) : change.target,
+        };
+      });
+
+      if (!data?.value) {
+        updatedChanges.unshift({
+          kind: "set-new",
+          target: newTempGuid,
+          params: {
+            newValue: newObj,
+          },
+        });
+      }
+      onChange?.(e, {
+        patch: updatedChanges,
+        schemaPointer,
+      });
+    };
+  }
   return {
     schema: nextSchema(schema, fieldName),
-    data: data?.value?.[fieldName],
+    data: fieldData,
     metadata,
-    dataId: data?.value?.[fieldName]?.id,
-    key: data?.value?.[fieldName]?.id || field,
+    dataId: fieldData?.id || newTempGuid,
+    key: fieldName,
+    field: fieldName,
     depth: depth ? depth + 1 : 1,
     schemaPointer: buildNextSchemaPointer(schema, schemaPointer, fieldName),
     repositoryName,
-    onChange,
+    onChange: onFieldChange,
     onClick,
     onError,
     onRenderError,
@@ -79,7 +139,7 @@ export const AutoFields: React.FunctionComponent<AutoFieldsProps> = ({
   render = (a: React.ReactNode) => a,
   ...props
 }) => (
-  <>
+  <div>
     {autoFieldsProps(props).map((fieldProps) => {
       return render(
         <AutoView {...fieldProps} key={fieldProps.key} />,
@@ -87,7 +147,7 @@ export const AutoFields: React.FunctionComponent<AutoFieldsProps> = ({
         fieldProps.field
       );
     })}
-  </>
+  </div>
 );
 
 export type AutoItemsProps = {

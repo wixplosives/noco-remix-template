@@ -14,11 +14,9 @@ export const stringInputVisualizerFactory: ComponentRepoRecordFactory<
     return (
       <Skin
         type="text"
-        value={data?.value}
+        value={data?.value || ""}
         onChange={(ev) =>
-          dataId &&
           onChange?.(ev, {
-            nodeId: dataId,
             schemaPointer,
             patch: [
               {

@@ -11,6 +11,15 @@
                     "subtitle": "Hero Section Subtitle",
                     "backgroundImage": "https://via.placeholder.com/1920x1080"
                 }
+            },
+            {
+                "__noco__type__": "gallery",
+                "props": {
+                    "title": "Hero Gallery Title",
+                    "images": [
+                        "https://via.placeholder.com/400x200"
+                    ]
+                }
             }
         ]
     }

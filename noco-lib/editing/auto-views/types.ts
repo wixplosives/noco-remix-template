@@ -1,4 +1,10 @@
-import { ExpandedData, GUID, NocoChange } from "noco-lib/universal/types";
+import {
+  DataChangeCategory,
+  ExpandedData,
+  GUID,
+  NocoBaseChange,
+  NocoChange,
+} from "noco-lib/universal/types";
 import { CoreSchemaMetaSchema } from "./JSONSchema";
 export interface Metadata {
   [pointer: string]: unknown;
@@ -10,7 +16,6 @@ export type AutoEventHandler<TEvent extends AutoEvent = AutoEvent> = (
 
 export interface AutoEvent {
   schemaPointer: string;
-  nodeId: string;
 }
 export interface ValidationError {
   data: unknown;
@@ -28,8 +33,18 @@ export interface AutoCustomEvent<
   data: Data;
 }
 
+export interface AutoViewSetNewChange
+  extends NocoBaseChange<DataChangeCategory> {
+  kind: "set-new";
+  params: {
+    newValue: ExpandedData;
+  };
+}
+
+export type AutoViewChange = NocoChange | AutoViewSetNewChange;
+
 export interface AutoChangeEvent extends AutoEvent {
-  patch: NocoChange[];
+  patch: AutoViewChange[];
 }
 export interface AutoClickEvent extends AutoEvent {
   data?: unknown;
@@ -40,7 +55,7 @@ export interface AutoViewProps<Data extends ExpandedData = ExpandedData> {
   validation?: boolean;
   data?: Data;
   metadata?: Metadata;
-  dataId?: GUID;
+  dataId: GUID;
   schemaPointer: string;
   pick?: string[];
   omit?: string[];

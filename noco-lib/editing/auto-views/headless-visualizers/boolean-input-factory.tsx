@@ -16,9 +16,7 @@ export const booleanInputVisualizerFactory: ComponentRepoRecordFactory<
         type="checkbox"
         value={data?.value ? "on" : "off"}
         onChange={(ev) =>
-          dataId &&
           onChange?.(ev, {
-            nodeId: dataId,
             schemaPointer,
             patch: [
               {

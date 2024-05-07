@@ -16,9 +16,7 @@ export const numberVisualizerFactory: ComponentRepoRecordFactory<
         type="number"
         value={data?.value}
         onChange={(ev) =>
-          dataId &&
           onChange?.(ev, {
-            nodeId: dataId,
             schemaPointer,
             patch: [
               {

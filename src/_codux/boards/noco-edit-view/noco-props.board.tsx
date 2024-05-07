@@ -1,4 +1,5 @@
 import "./noco-props.board.css";
+
 import { createBoard } from "@wixc3/react-board";
 import { ComponentsRepo } from "noco-lib/editing/auto-views/components-repo";
 import { RepositoryProvider } from "noco-lib/editing/auto-views/repository";
@@ -16,6 +17,8 @@ import {
   RootSchemaProvider,
   SchemaClient,
 } from "noco-lib/editing/auto-views/root-schema";
+import { enumInputVisualizer } from "noco-lib/editing/auto-views/visualizers/enum-input";
+import { newTempGuid } from "noco-lib/universal/types";
 
 const baseRepo = new ComponentsRepo("BaseRepo")
   .register({
@@ -32,7 +35,8 @@ const baseRepo = new ComponentsRepo("BaseRepo")
 
   .register(stringInputVisualizer)
   .register(numberInputVisualizer)
-  .register(booleanInputVisualizer);
+  .register(booleanInputVisualizer)
+  .register(enumInputVisualizer);
 const repo = baseRepo.clone("LayoutRepo").addWrapper(
   (item, props) => (
     <div className="field">
@@ -43,11 +47,13 @@ const repo = baseRepo.clone("LayoutRepo").addWrapper(
 );
 repo.addWrapper(
   (item, props) => {
-    if (props.schema.title) {
+    if (props.schema.title || props.field) {
       return (
         <div className="object">
           <h2>
-            {props.field} {props.schema.title}
+            {props.field && <span>{props.field}</span>}
+            {props.schema.title && props.field && <span>: </span>}
+            {props.schema.title && <span>{props.schema.title}</span>}
           </h2>
           {item}
         </div>
@@ -69,7 +75,7 @@ const schema: CoreSchemaMetaSchema = {
 
   definitions: {
     anObject: {
-      title: "An Object",
+      title: "Order",
       type: "object",
       properties: {
         a: {
@@ -94,31 +100,31 @@ const schema: CoreSchemaMetaSchema = {
     active: {
       type: "boolean",
     },
-    localRef: {
+    orderInfo: {
       $ref: "#/definitions/anObject",
     },
-    otherRef: {
-      $ref: "schema2#/definitions/anObject",
+    userInfo: {
+      $ref: "schema2#/definitions/userInfo",
     },
   },
 };
 
-const schema2: CoreSchemaMetaSchema = {
+const appDefinition: CoreSchemaMetaSchema = {
   type: "object",
 
   definitions: {
-    anObject: {
-      title: "An Object",
+    userInfo: {
+      title: "User",
       type: "object",
       properties: {
-        a: {
+        name: {
           type: "string",
         },
-        b: {
+        age: {
           type: "number",
         },
-        c: {
-          type: "boolean",
+        title: {
+          enum: ["Mr", "Mrs", "Miss", "false", false, 5, "5"],
         },
       },
     },
@@ -126,7 +132,7 @@ const schema2: CoreSchemaMetaSchema = {
 };
 const schemaClient = new SchemaClient();
 schemaClient.setSchema("root-schema", schema);
-schemaClient.setSchema("schema2", schema2);
+schemaClient.setSchema("schema2", appDefinition);
 export default createBoard({
   name: "layout",
   Board: () => {
@@ -134,10 +140,14 @@ export default createBoard({
     const handleDataChange = (_ev: unknown, change: AutoChangeEvent) => {
       setData((prevData) => {
         return change.patch.reduce((prevData, change) => {
+          if (change.kind === "set-new") {
+            throw new Error("Not implemented");
+          }
           return NocoReducer(prevData, change);
         }, prevData);
       });
     };
+
     return (
       <RepositoryProvider components={repo}>
         <RootSchemaProvider
@@ -148,6 +158,7 @@ export default createBoard({
           <AutoView
             schema={schema}
             data={data}
+            dataId={newTempGuid}
             schemaPointer="root-schema"
             onChange={handleDataChange}
           />

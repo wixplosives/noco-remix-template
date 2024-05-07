@@ -159,6 +159,7 @@ export const useRefSchema = (inputSchema: CoreSchemaMetaSchema) => {
         : undefined,
     [inputSchema.$ref]
   );
+
   React.useEffect(() => {
     if (!schemaClient || !refInfo) {
       return;

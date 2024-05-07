@@ -14,7 +14,7 @@ export interface ComponentsRepoStorage<P> {
   [type: string | symbol]: Array<ComponentRepoRecord<P>>;
 }
 
-export type Predicate = (props?: AutoViewProps) => boolean;
+export type Predicate = (props: AutoViewProps) => boolean;
 
 export type WrapperFunction = (
   item: JSX.Element,
@@ -103,7 +103,7 @@ export class ComponentsRepo {
     return Array.from(this.byName.keys());
   }
 
-  public getMatched(node: CoreSchemaMetaSchema, props?: AutoViewProps) {
+  public getMatched(props: AutoViewProps) {
     return this.byPredicate.filter(({ predicate }) => predicate(props));
   }
 

@@ -96,7 +96,7 @@ export default createBoard({
   plugins: [BoardPlugin.use()],
   environmentProps: {
     canvasHeight: 216,
-    canvasWidth: 344,
+    canvasWidth: 582,
     windowWidth: 1152,
   },
 });

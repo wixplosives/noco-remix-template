@@ -80,7 +80,14 @@ export interface NocoBaseChange<T extends DataChangeCategory> {
 export interface NocoSetChange extends NocoBaseChange<DataChangeCategory> {
   kind: "set";
   params: {
-    newValue: string | number | boolean | null | undefined;
+    newValue:
+      | string
+      | number
+      | boolean
+      | null
+      | undefined
+      | ExpandedData<Record<string, ExpandedData>>
+      | ExpandedData<ExpandedData[]>;
   };
 }
 

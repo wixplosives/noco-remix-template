@@ -21,14 +21,22 @@ export interface AutoViewWrapperProps extends AutoViewProps {
 }
 
 export type AutoViewWrapper = React.ComponentType<AutoViewWrapperProps>;
-
+export interface AutoViewUnionSelectorProps extends AutoViewProps {
+  children: React.ReactNode;
+  select: (pointer: string) => void;
+  schemas: Array<{
+    schema: CoreSchemaMetaSchema;
+    schemaPointer: string;
+  }>;
+  selected: string;
+}
 export type AutoViewUnionSelector = React.ComponentType<
   AutoViewProps & {
     children: React.ReactNode;
     select: (pointer: string) => void;
     schemas: Array<{
       schema: CoreSchemaMetaSchema;
-      pointer: string;
+      schemaPointer: string;
     }>;
     selected: string;
   }
@@ -38,7 +46,7 @@ export type UnionSelectorPredicate = (
   props: AutoViewProps,
   schemas: Array<{
     schema: CoreSchemaMetaSchema;
-    pointer: string;
+    schemaPointer: string;
   }>
 ) => boolean;
 
@@ -155,7 +163,7 @@ export class ComponentsRepo {
     props: AutoViewProps,
     schemas: Array<{
       schema: CoreSchemaMetaSchema;
-      pointer: string;
+      schemaPointer: string;
     }>
   ) {
     return this.unionSelectors

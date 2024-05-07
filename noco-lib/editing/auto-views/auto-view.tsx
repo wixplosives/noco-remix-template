@@ -47,6 +47,7 @@ export const AutoView = (props: AutoViewProps) => {
   const schemaRes = useRefSchema(schemaPointer, schema);
   const { schemaClient, schemaId } = React.useContext(schemaContext);
   let resolvedSchema = schemaRes?.schemas[0];
+
   // useMemo(() => {
   //   validate({
   //     schema,
@@ -67,22 +68,48 @@ export const AutoView = (props: AutoViewProps) => {
       }
     }
   }
+  const [selected, setSelected] = React.useState(resolvedSchema?.schemaPointer);
   if (!resolvedSchema) {
     return null;
   }
 
+  const showSchemaPointer = selected || resolvedSchema.schemaPointer;
+  const showSchema = selected
+    ? schemaRes?.schemas.find((s) => s.schemaPointer === selected)?.schema ||
+      resolvedSchema.schema
+    : resolvedSchema.schema;
   const childProps = {
     ...props,
-    schema: resolvedSchema.schema,
-    schemaPointer: resolvedSchema.schemaPointer,
+    schema: showSchema,
+    schemaPointer: showSchemaPointer,
   };
   const matches = components.getMatched(childProps);
 
   if (matches.length > 0) {
     const componentRecord = matches.slice().pop();
+    const UnionSelector =
+      (schemaRes?.schemas.length || 0) > 1
+        ? components.getUnionSelectors(childProps, schemaRes!.schemas)?.pop()
+        : undefined;
     const Component = componentRecord!.component;
 
     const wrappers = components.getWrappers(childProps);
+    let view = wrappers.reduce(
+      (item, Comp) => <Comp {...childProps}>{item}</Comp>,
+      <Component {...childProps} />
+    );
+    if (UnionSelector) {
+      view = (
+        <UnionSelector
+          {...childProps}
+          select={setSelected}
+          selected={showSchemaPointer}
+          schemas={schemaRes!.schemas}
+        >
+          {view}
+        </UnionSelector>
+      );
+    }
     if (resolvedSchema.isExternal) {
       const externalSchemaId = splitRef(resolvedSchema.schemaPointer).id;
       return (
@@ -91,19 +118,11 @@ export const AutoView = (props: AutoViewProps) => {
           schemaId={externalSchemaId}
           schemaClient={schemaClient}
         >
-          {wrappers.reduce(
-            (item, Comp) => (
-              <Comp {...childProps}>{item}</Comp>
-            ),
-            <Component {...childProps} />
-          )}
+          {view}
         </RootSchemaProvider>
       );
     }
-    return wrappers.reduce(
-      (item, Comp) => <Comp {...childProps}>{item}</Comp>,
-      <Component {...childProps} />
-    );
+    return view;
   }
   throw Error(`cannot resolve component for "${schemaPointer}"`);
 };

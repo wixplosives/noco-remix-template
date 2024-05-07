@@ -268,6 +268,18 @@ const resolveOneOf = (
       return res;
     });
   }
+  if (schema.type && Array.isArray(schema.type)) {
+    return {
+      schemas: schema.type.map((type, idx) => ({
+        schema: {
+          ...schema,
+          type,
+        },
+        schemaPointer: `${schemaPointer}/type/${idx}`,
+        isExternal: false,
+      })),
+    };
+  }
   const refInfo = getidAndInnerPath(schemaPointer);
 
   const isExternal = !!refInfo.id && refInfo.id !== rootSchemaId;

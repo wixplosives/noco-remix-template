@@ -21,6 +21,7 @@ import { enumInputVisualizer } from "noco-lib/editing/auto-views/visualizers/enu
 import { newTempGuid } from "noco-lib/universal/types";
 import { fieldWrapperRecord } from "noco-lib/editing/auto-views/wrappers/field-wrapper";
 import { objectWrapperRecord } from "noco-lib/editing/auto-views/wrappers/object-wrapper";
+import { fieldUnionSelectorRecord } from "noco-lib/editing/auto-views/union-selectors/field-union-selector";
 
 const baseRepo = new ComponentsRepo("BaseRepo")
   .register({
@@ -41,16 +42,19 @@ const baseRepo = new ComponentsRepo("BaseRepo")
   .register(enumInputVisualizer);
 const repo = baseRepo.clone("LayoutRepo").addWrapper(fieldWrapperRecord);
 repo.addWrapper(objectWrapperRecord);
-
+repo.addUnionSelector(fieldUnionSelectorRecord);
 export const initialData = expandDataWithNewIds({
   login: "johondoe",
   age: 21,
   active: true,
+  visitorOrUserOrString: {
+    name: "John",
+    age: 21,
+  },
 });
 
 const schema: CoreSchemaMetaSchema = {
   type: "object",
-
   definitions: {
     anObject: {
       title: "Order",
@@ -77,6 +81,19 @@ const schema: CoreSchemaMetaSchema = {
     },
   },
   properties: {
+    visitorOrUserOrString: {
+      oneOf: [
+        {
+          $ref: "schema2#/definitions/userInfo",
+        },
+        {
+          $ref: "schema2#/definitions/visitorInfo",
+        },
+        {
+          type: "string",
+        },
+      ],
+    },
     login: {
       type: "string",
     },
@@ -86,12 +103,26 @@ const schema: CoreSchemaMetaSchema = {
     active: {
       type: "boolean",
     },
+    simpleUnion: {
+      type: ["string", "number"],
+    },
+    simpleUnionVerbose: {
+      oneOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "number",
+        },
+      ],
+    },
     orderInfo: {
       $ref: "#/definitions/anObject",
     },
     userInfo: {
       $ref: "schema2#/definitions/userInfo",
     },
+
     status: {
       oneOf: [
         {
@@ -121,6 +152,19 @@ const appDefinition: CoreSchemaMetaSchema = {
         },
         title: {
           enum: ["Mr", "Mrs", "Miss", "false", false, 5, "5"],
+        },
+      },
+      required: ["name", "age"],
+    },
+    visitorInfo: {
+      title: "Visitor",
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+        },
+        age: {
+          type: "number",
         },
       },
     },

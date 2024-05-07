@@ -2,8 +2,8 @@ import { ExpandedData, newTempGuid } from "noco-lib/universal/types";
 import { ComponentRepoRecordFactory } from "../components-repo";
 import { AutoViewProps } from "../types";
 import { CoreSchemaMetaSchema } from "../JSONSchema";
-
-export type EnumInputVisualizerProps = AutoViewProps<ExpandedData>;
+import { ChangeEvent } from "react";
+import { expandDataWithNewIds } from "noco-lib/universal/expander";
 
 export const getEnumOptions = (schema?: CoreSchemaMetaSchema): unknown[] => {
   if (!schema) {
@@ -51,44 +51,58 @@ export const hasOnlyEnumOptions = (
   }
   return false;
 };
-export const enumInputVisualizerFactory: ComponentRepoRecordFactory<
+export type EnumInputVisualizerProps = Omit<
   JSX.IntrinsicElements["select"],
-  EnumInputVisualizerProps
+  "children" | "onChange"
+> & {
+  options: Array<{ key: string; value: unknown }>;
+  onChange: (key: string) => void;
+};
+export const enumInputVisualizerFactory: ComponentRepoRecordFactory<
+  Omit<JSX.IntrinsicElements["select"], "children" | "onChange"> & {
+    options: Array<{ key: string; value: unknown }>;
+    onChange: (e: ChangeEvent, key: string) => void;
+  },
+  AutoViewProps
 > = (Skin) => ({
   name: "enum-input",
   predicate: (props) => hasOnlyEnumOptions(props?.schema) === true,
   component: ({ data, onChange, dataId, schemaPointer, schema }) => {
     const options = getEnumOptions(schema);
-    const idx = options.findIndex((o) => o === data?.value);
+    const keydOptions: Array<{ key: string; value: unknown }> = options.map(
+      (item, idx) => ({ key: idx.toString(), value: item })
+    );
+    const key = keydOptions.find((o) => o === data?.value)?.key;
+
     return (
-      <div>
-        <select
-          value={idx}
-          onChange={(ev) => {
-            const newIdx = parseInt(ev.target.value);
-            if (newIdx === idx) {
-              return;
-            }
-            const newData = options[newIdx];
-            onChange?.(ev, {
-              schemaPointer,
-              patch: [
-                {
-                  kind: "set",
-                  target: dataId,
-                  params: {
-                    newValue: newData as any,
-                  },
+      <Skin
+        value={key}
+        onChange={(e, key) => {
+          const value = keydOptions.find((o) => o.key === key)?.value;
+          const expandedValue = isArrayOrObject(value)
+            ? expandDataWithNewIds(value)
+            : value;
+          onChange?.(e, {
+            schemaPointer,
+            patch: [
+              {
+                kind: "set",
+                target: dataId,
+                params: {
+                  newValue: expandedValue as any,
                 },
-              ],
-            });
-          }}
-        >
-          {options.map((option, idx) => (
-            <option key={idx} label={option?.toString()} value={idx} />
-          ))}
-        </select>
-      </div>
+              },
+            ],
+          });
+        }}
+        options={keydOptions}
+      />
     );
   },
 });
+
+const isArrayOrObject = (
+  value: unknown
+): value is unknown[] | Record<string, unknown> => {
+  return !!value && (Array.isArray(value) || typeof value === "object");
+};

@@ -19,6 +19,8 @@ import {
 } from "noco-lib/editing/auto-views/root-schema";
 import { enumInputVisualizer } from "noco-lib/editing/auto-views/visualizers/enum-input";
 import { newTempGuid } from "noco-lib/universal/types";
+import { fieldWrapperRecord } from "noco-lib/editing/auto-views/wrappers/field-wrapper";
+import { objectWrapperRecord } from "noco-lib/editing/auto-views/wrappers/object-wrapper";
 
 const baseRepo = new ComponentsRepo("BaseRepo")
   .register({
@@ -37,33 +39,8 @@ const baseRepo = new ComponentsRepo("BaseRepo")
   .register(numberInputVisualizer)
   .register(booleanInputVisualizer)
   .register(enumInputVisualizer);
-const repo = baseRepo.clone("LayoutRepo").addWrapper(
-  (props) => (
-    <div className="field">
-      {props.field}:{props.children}
-    </div>
-  ),
-  (node) => node?.schema.type !== "object"
-);
-repo.addWrapper(
-  (props) => {
-    const item = props.children;
-    if (props.schema.title || props.field) {
-      return (
-        <div className="object">
-          <h2>
-            {props.field && <span>{props.field}</span>}
-            {props.schema.title && props.field && <span>: </span>}
-            {props.schema.title && <span>{props.schema.title}</span>}
-          </h2>
-          {item}
-        </div>
-      );
-    }
-    return item;
-  },
-  (node) => node?.schema.type === "object"
-);
+const repo = baseRepo.clone("LayoutRepo").addWrapper(fieldWrapperRecord);
+repo.addWrapper(objectWrapperRecord);
 
 export const initialData = expandDataWithNewIds({
   login: "johondoe",

@@ -16,9 +16,11 @@ export interface ComponentsRepoStorage<P> {
 
 export type Predicate = (props: AutoViewProps) => boolean;
 
-export type AutoViewWrapper = React.ComponentType<
-  AutoViewProps & { children: React.ReactNode }
->;
+export interface AutoViewWrapperProps extends AutoViewProps {
+  children: React.ReactNode;
+}
+
+export type AutoViewWrapper = React.ComponentType<AutoViewWrapperProps>;
 
 export type AutoViewUnionSelector = React.ComponentType<
   AutoViewProps & {
@@ -32,6 +34,14 @@ export type AutoViewUnionSelector = React.ComponentType<
   }
 >;
 
+export type UnionSelectorPredicate = (
+  props: AutoViewProps,
+  schemas: Array<{
+    schema: CoreSchemaMetaSchema;
+    pointer: string;
+  }>
+) => boolean;
+
 export type GetNode = (node: CoreSchemaMetaSchema) => string;
 
 export interface ComponentRepoRecord<P> {
@@ -39,7 +49,16 @@ export interface ComponentRepoRecord<P> {
   component: React.ComponentType<P>;
   predicate: Predicate;
 }
-
+export interface ComponentWrapperRecord {
+  name: string;
+  component: AutoViewWrapper;
+  predicate?: Predicate;
+}
+export interface UnionSelectorRecord {
+  name: string;
+  component: AutoViewUnionSelector;
+  predicate: UnionSelectorPredicate;
+}
 export type ComponentRepoRecordFactory<P, U> = (
   innerComponent: React.ComponentType<P>
 ) => ComponentRepoRecord<U>;
@@ -56,14 +75,8 @@ export class ComponentsRepo {
 
   private byName = new Map<string, ComponentRepoRecord<AutoViewProps>>();
 
-  private wrappers: Array<{
-    predicate?: Predicate;
-    fn: AutoViewWrapper;
-  }> = [];
-  private oneOfSelectors: Array<{
-    predicate?: Predicate;
-    fn: AutoViewWrapper;
-  }> = [];
+  private wrappers: Array<ComponentWrapperRecord> = [];
+  private unionSelectors: UnionSelectorRecord[] = [];
   constructor(
     public name: string,
     public getNodeType: GetNode = (node) => node.type as string
@@ -121,8 +134,8 @@ export class ComponentsRepo {
     return this.byPredicate.filter(({ predicate }) => predicate(props));
   }
 
-  public addWrapper(fn: AutoViewWrapper, predicate?: Predicate) {
-    this.wrappers.push({ predicate, fn });
+  public addWrapper(record: ComponentWrapperRecord) {
+    this.wrappers.push(record);
 
     return this;
   }
@@ -130,7 +143,24 @@ export class ComponentsRepo {
   public getWrappers(props: AutoViewProps) {
     return this.wrappers
       .filter(({ predicate }) => filterByPredicate(props, predicate))
-      .map(({ fn }) => fn);
+      .map(({ component }) => component);
+  }
+
+  public addUnionSelector(record: UnionSelectorRecord) {
+    this.unionSelectors.push(record);
+
+    return this;
+  }
+  public getUnionSelectors(
+    props: AutoViewProps,
+    schemas: Array<{
+      schema: CoreSchemaMetaSchema;
+      pointer: string;
+    }>
+  ) {
+    return this.unionSelectors
+      .filter(({ predicate }) => !predicate || predicate(props, schemas))
+      .map(({ component }) => component);
   }
 
   public getRawWrappers() {
@@ -141,8 +171,8 @@ export class ComponentsRepo {
     const copy = new ComponentsRepo(name, getNodeType || this.getNodeType);
     this.byPredicate.forEach((record) => copy.register(record));
 
-    this.wrappers.forEach(({ fn, predicate }) => {
-      copy.addWrapper(fn, predicate);
+    this.wrappers.forEach((record) => {
+      copy.addWrapper(record);
     });
     return copy;
   }

@@ -66,6 +66,7 @@ export interface AutoViewProps<Data extends ExpandedData = ExpandedData> {
   onRenderError?: (info: RenderErrorInfo) => void;
   repositoryName?: string;
   field?: string;
+  required?: boolean;
   depth?: number;
 }
 

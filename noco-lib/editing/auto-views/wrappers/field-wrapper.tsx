@@ -6,7 +6,7 @@ import {
 export const FieldWrapper = (props: AutoViewWrapperProps) => {
   return (
     <div className="field">
-      {props.field}:{props.children}
+      {props.field} {props.required && "*"}:{props.children}
     </div>
   );
 };

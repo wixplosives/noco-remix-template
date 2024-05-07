@@ -68,6 +68,7 @@ export function getAutoFieldProps(
   }: AutoViewProps<ExpandedData<Record<string, ExpandedData>>>
 ): AutoViewProps {
   const fieldData = data?.value?.[fieldName];
+  const required = schema.required?.includes(fieldName);
   let onFieldChange = onChange;
   if (!fieldData) {
     onFieldChange = (e, { patch }) => {
@@ -132,6 +133,7 @@ export function getAutoFieldProps(
     onRenderError,
     onCustomEvent,
     validation: false,
+    required,
   };
 }
 
